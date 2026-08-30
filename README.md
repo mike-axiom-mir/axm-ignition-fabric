@@ -2,11 +2,11 @@
 
 Experimental AXM research branch for testing whether a software body can keep large capability/state possibility dormant, materialize only the workset required by the current event, execute within explicit resource bounds, merge the result deterministically back into persistent truth, and release or retain work according to grounded reuse/resource conditions.
 
-## v0.06 research question
+## v0.07 research question
 
-When canonical truth changes, can the runtime invalidate only derived bodies whose declared source domains changed instead of throwing away the complete warm body?
+When useful derived bodies compete for scarce memory, can a deterministic runtime enforce a hard cache ceiling and choose what to keep using measured reconstruction cost, observed reuse and body size without losing exact truth?
 
-The scoped path must preserve exact results and must fall back to full invalidation whenever the transition evidence is missing, stale, or not safely mapped.
+The value-aware policy must be compared against simpler policies and is explicitly allowed to lose.
 
 ## Core loop
 
@@ -17,10 +17,10 @@ canonical truth + capability registry
         -> choose direct / cold / warm / eager execution
         -> materialize or reuse bounded workset
         -> deterministic result
-        -> canonical transition receipt
-        -> resolve affected source domains
-        -> invalidate only dependent cached bodies
-        -> retain unaffected verified bodies
+        -> optional canonical transition receipt
+        -> scoped invalidation where evidence permits
+        -> hard memory budget
+        -> retain / evict / transient-use derived bodies
 ```
 
 ## Evidence ladder
@@ -105,7 +105,7 @@ Supported behavior:
 
 ### v0.06 - deterministic dependency-scoped invalidation
 
-A warm session can now accept a hash-bound transition receipt:
+A warm session can accept a hash-bound transition receipt:
 
 ```text
 fromStateHash
@@ -115,7 +115,7 @@ fromStateHash
 + receiptHash
 ```
 
-The receipt is resolved against explicit capability/source-domain bindings.
+The receipt resolves against explicit capability/source-domain bindings.
 
 Current realistic-workload bindings:
 
@@ -136,31 +136,27 @@ Safety rules:
 - canonical state changed without a trusted transition receipt -> full cache invalidation;
 - scoped invalidation never changes canonical output expectations.
 
-GitHub Actions run `33332487877` passed **33/33 tests** plus the complete v0.01-v0.05 benchmark stack and the new scoped invalidation benchmark.
+GitHub Actions run `33332487877` passed **33/33 tests** plus the complete earlier benchmark stack and the scoped invalidation benchmark.
 
 #### Path-only mutation
 
-Five deterministic path changes affected only the `metadata` source domain.
+Five deterministic path changes affected only `metadata`.
 
-| Strategy | Rebuilt bytes | Measured transition + first-report wall time |
+| Strategy | Rebuilt bytes | Transition + first-report wall time |
 | --- | ---: | ---: |
 | full invalidation | 4,811,340 B | 345.60 ms |
 | scoped invalidation | 137,500 B | 13.17 ms |
 | avoided rebuild | **4,673,840 B** | observed delta 332.43 ms |
 
-Each scoped transition released and rebuilt only the 27,500-byte metadata body while retaining the other six bodies.
-
 #### Import-target mutation
 
-Four same-width import-target changes affected `imports` and `content-hash` only.
+Four same-width import-target changes affected `imports` and `content-hash`.
 
-| Strategy | Rebuilt bytes | Measured transition + first-report wall time |
+| Strategy | Rebuilt bytes | Transition + first-report wall time |
 | --- | ---: | ---: |
 | full invalidation | 3,849,072 B | 277.79 ms |
 | scoped invalidation | 198,912 B | 18.97 ms |
 | avoided rebuild | **3,650,160 B** | observed delta 258.82 ms |
-
-Each scoped transition released and rebuilt only the dependency index plus duplicate-content index, 49,728 bytes total per transition.
 
 Every resulting report hash matched a fresh direct baseline.
 
@@ -170,27 +166,99 @@ Evidence:
 
 - `evidence/ignition-v0.06-scoped-invalidation.json`
 
+### v0.07 - hard-budget deterministic retention
+
+v0.07 adds `BudgetedRetentionSession` for the first bounded eviction experiment.
+
+Current v0.07 scope is deliberately narrow: exactly one dependency-free matched capability per request. This isolates retention policy from multi-capability merge complexity.
+
+Hard rules:
+
+- `cacheBytesAfter <= maxCacheBytes` on every run;
+- a body larger than the complete budget is used transiently and released;
+- no-retention, LRU and value-aware policies all produce the same direct-baseline result hashes;
+- canonical state change currently invalidates the complete v0.07 budget cache;
+- the cache policy never gains truth authority.
+
+Policies:
+
+**none**
+- never retain derived bodies.
+
+**LRU**
+- evict the least-recently-used body when the byte ceiling would be exceeded.
+
+**value**
+- score retained bodies from measured materialization time × observed hit count, normalized by body size;
+- evict the lowest deterministic score first.
+
+The first LRU test initially failed because its fixture used a 40 KB limit that could actually hold both tested bodies, so no eviction correctly occurred. The fixture was repaired to 20 KB. No eviction algorithm change was required.
+
+GitHub Actions run `33332834767` passed **38/38 tests** plus all earlier benchmarks and the new retention comparison.
+
+#### Hot expensive search
+
+Budget: 900,000 B. The search body is 837,720 B and was used three times before a burst of smaller indexes.
+
+| Policy | Wall time | Materialized bytes | Hits | Evictions |
+| --- | ---: | ---: | ---: | ---: |
+| none | 648.45 ms | 6,793,808 B | 0 | 0 |
+| LRU | 297.99 ms | 1,767,488 B | 6 | 2 |
+| **value** | **229.58 ms** | **929,768 B** | **7** | **1** |
+
+LRU evicted the old 837,720-byte search body after its first three hits. The value policy instead evicted the cheaper 39,728-byte dependency body, retained search, and avoided rebuilding the expensive search index later.
+
+#### Low reuse
+
+Four different bodies were requested exactly once.
+
+| Policy | Wall time | Hits | Final retained bytes |
+| --- | ---: | ---: | ---: |
+| none | 72.39 ms | 0 | **0 B** |
+| LRU | 76.01 ms | 0 | 92,048 B |
+| value | 70.07 ms | 0 | 92,048 B |
+
+The few-millisecond timing ordering is not treated as a retention win because nobody got a cache hit. Both retention policies consumed memory with zero observed reuse. No-retention is therefore the lower-memory grounded choice for this trace.
+
+#### Alternating small bodies
+
+Budget: 60,000 B. Dependency and symbol bodies alternate and cannot coexist under the ceiling.
+
+| Policy | Wall time | Hits | Evictions |
+| --- | ---: | ---: | ---: |
+| none | 216.25 ms | 0 | 0 |
+| **LRU** | **205.06 ms** | 0 | 11 |
+| value | 206.24 ms | 0 | 11 |
+
+Neither retention policy achieved a single hit. Both thrashed on every switch. LRU was slightly faster than value in this hosted sample, preserving an explicit counterexample where the value policy adds no useful cache behavior.
+
+Timing boundary: each policy runs in a fresh Node process. Direct reference verification is completed before policy timing. Single hosted samples are observations, not statistical timing distributions.
+
+Evidence:
+
+- `evidence/ignition-v0.07-value-aware-retention.json`
+
 ## Current supported claim
 
-> In these deterministic harnesses, dormant materialization can reduce real derived runtime allocation, warm reuse can avoid repeated reconstruction, an adaptive Governor can choose or refuse retention, and a trusted hash-bound change receipt can preserve unaffected warm bodies across canonical state changes while rebuilding only declared dependent bodies.
+> In these deterministic harnesses, dormant materialization can reduce real derived runtime allocation, warm reuse can avoid repeated reconstruction, an adaptive Governor can choose or refuse retention, trusted transition receipts can preserve unaffected bodies across state changes, and a hard-budget retention policy can deterministically choose which derived bodies remain warm while preserving exact outputs.
 
 The architecture remains conditional:
 
-> **Use Ignition where dormant possibility or reusable derived state pays for the orchestration. Use direct/eager execution where it does not. When truth changes, reuse only what the evidence proves remains valid.**
+> **Use Ignition only where dormancy, reuse, scoped validity, or selective retention actually pays for the orchestration. Direct, eager, LRU, or no retention remain valid outcomes when measurement supports them.**
 
 ## This does NOT prove
 
 - software creates RAM, CPU cycles, energy, or free compute;
 - universal runtime speedup;
-- global Governor optimality;
+- global Governor or eviction-policy optimality;
 - production-scale superiority;
 - statistically established timing distributions from single hosted samples;
 - automatic discovery of arbitrary dependency semantics;
 - that upstream change receipts are free to compute;
-- optimal cache eviction;
+- that measured materialization time is a timeless intrinsic value signal;
 - that every AXM capability should use this runtime pattern.
 
-Scoped invalidation correctness depends on complete, truthful upstream transition evidence. The current domain bindings are explicit harness declarations, not universal semantic inference.
+v0.07 budgeted retention is not yet integrated with v0.06 scoped invalidation. Its state change fallback currently invalidates the complete budget cache.
 
 ## Run
 
@@ -202,6 +270,7 @@ npm run benchmark:realistic
 npm run benchmark:warm
 npm run benchmark:governor
 npm run benchmark:invalidation
+npm run benchmark:retention
 ```
 
 Evidence receipts:
@@ -212,32 +281,34 @@ Evidence receipts:
 - `evidence/ignition-v0.05-governor-pre-fingerprint.json`
 - `evidence/ignition-v0.05-governor.json`
 - `evidence/ignition-v0.06-scoped-invalidation.json`
+- `evidence/ignition-v0.07-value-aware-retention.json`
 
 ## Next evidence gate
 
-Scoped invalidation can preserve useful cached bodies, but a real runtime also needs to decide what deserves scarce memory.
+The next useful rung is not a new scoring trick. It is integration:
 
-Next rung:
+**combine v0.06 scoped transition invalidation with v0.07 hard-budget retention.**
 
-**value-aware deterministic eviction under a hard memory budget**
+Target loop:
 
-Candidate evidence-bound inputs:
+```text
+canonical transition receipt
+        -> invalidate only stale cached bodies
+        -> keep unaffected verified bodies
+        -> enforce hard byte ceiling
+        -> evict low-value valid bodies only if budget requires it
+        -> execute against one canonical state fingerprint
+```
 
-- body bytes
-- measured reconstruction/materialization cost
-- recent reuse count
-- recency
-- dependency/route relevance
-- cache budget
+Compare this combined runtime against:
 
-The first policy must be simple, deterministic and inspectable. Compare it against at least:
+- full invalidation + no retention;
+- scoped invalidation without a hard budget;
+- hard-budget retention with full state invalidation;
+- simple LRU;
+- value-aware retention.
 
-- no retention;
-- retain-everything-until-budget-fails;
-- simple LRU/recency policy;
-- value-aware policy.
-
-The value-aware policy must be allowed to lose. If LRU or no retention is cheaper for a workload, record that result rather than tuning the benchmark around the new policy.
+Repeated samples or aggregated runs should be added before using timing differences as stronger performance evidence.
 
 ## Lane rule
 
