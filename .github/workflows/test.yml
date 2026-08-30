@@ -22,3 +22,5 @@ jobs:
         run: npm run demo
       - name: Run isolated memory benchmark
         run: npm run benchmark:memory
+      - name: Run realistic parsed/indexed workload benchmark
+        run: npm run benchmark:realistic
