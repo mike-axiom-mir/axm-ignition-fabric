@@ -36,3 +36,5 @@ jobs:
         run: npm run benchmark:truth-budget
       - name: Run versioned domain identity benchmark
         run: npm run benchmark:domain-identity
+      - name: Run incremental domain revision benchmark
+        run: npm run benchmark:incremental-identity
