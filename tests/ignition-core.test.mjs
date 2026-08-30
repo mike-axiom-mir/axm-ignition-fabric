@@ -20,11 +20,19 @@ test("eager and ignition execute the same relevant capability closure", async ()
   assert.equal(eager.receipt.resultHash, ignition.receipt.resultHash);
 });
 
-test("ignition materially reduces the active workset for a narrow request", async () => {
+test("ignition materially reduces the real materialized workset for a narrow request", async () => {
   const { eager, ignition } = await runPair(demoRequests.numbers);
   assert.ok(ignition.receipt.materializedCount < eager.receipt.materializedCount);
-  assert.ok(ignition.receipt.estimatedWorkingSetBytes < eager.receipt.estimatedWorkingSetBytes);
+  assert.ok(ignition.receipt.actualMaterializedBytes < eager.receipt.actualMaterializedBytes);
   assert.deepEqual(ignition.receipt.materializedCapabilityIds, ["normalize-numbers", "sum-numbers"]);
+  assert.equal(ignition.receipt.actualMaterializedBytes, 3 * 1024 * 1024);
+});
+
+test("materialization receipts account for the actual allocated body sizes", async () => {
+  const { eager } = await runPair(demoRequests.lookup);
+  const summed = eager.receipt.materializationReceipts.reduce((total, receipt) => total + receipt.allocatedBytes, 0);
+  assert.equal(eager.receipt.actualMaterializedBytes, summed);
+  assert.equal(eager.receipt.materializationReceipts.length, eager.receipt.materializedCount);
 });
 
 test("matched dependencies are pulled into the materialized workset", async () => {
@@ -49,6 +57,7 @@ test("the irrelevant heavy capability stays dormant unless directly requested", 
     mode: "ignition",
   });
   assert.equal(heavy.receipt.materializedCapabilityIds.includes("irrelevant-heavy-capability"), true);
+  assert.equal(heavy.receipt.actualMaterializedBytes, 16 * 1024 * 1024);
 });
 
 test("same request and state produce stable result hashes", async () => {
@@ -73,5 +82,6 @@ test("comparison helper proves equivalent results with a smaller materialized bo
   assert.equal(comparison.equivalent, true);
   assert.equal(comparison.executedCountDelta, 0);
   assert.ok(comparison.materializedCountDelta > 0);
-  assert.ok(comparison.workingSetDeltaBytes > 0);
+  assert.ok(comparison.estimatedWorkingSetDeltaBytes > 0);
+  assert.ok(comparison.actualMaterializedDeltaBytes > 0);
 });
