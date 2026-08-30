@@ -10,12 +10,14 @@ for (const [name, request] of Object.entries(demoRequests)) {
   const comparison = compareEquivalentRuns(eager, ignition);
 
   console.log(JSON.stringify({
+    schema: "axm.ignition-demo/v0.02",
     scenario: name,
     equivalent: comparison.equivalent,
     eagerMaterialized: eager.receipt.materializedCount,
     ignitionMaterialized: ignition.receipt.materializedCount,
-    eagerEstimatedWorkingSetBytes: eager.receipt.estimatedWorkingSetBytes,
-    ignitionEstimatedWorkingSetBytes: ignition.receipt.estimatedWorkingSetBytes,
+    eagerActualMaterializedBytes: eager.receipt.actualMaterializedBytes,
+    ignitionActualMaterializedBytes: ignition.receipt.actualMaterializedBytes,
+    actualMaterializedSavingsBytes: comparison.actualMaterializedDeltaBytes,
     executedCapabilityIds: ignition.receipt.executedCapabilityIds,
     resultHash: ignition.receipt.resultHash,
   }));
