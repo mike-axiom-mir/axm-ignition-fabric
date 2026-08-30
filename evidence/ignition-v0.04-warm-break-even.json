@@ -1,0 +1,89 @@
+{
+  "schema": "axm.ignition-warm-evidence/v0.04",
+  "status": "MEASURED_IN_HARNESS",
+  "testedHead": "9be1b055c570922e68ecd9e68be847e284a42921",
+  "githubActionsRunId": 33331597801,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "workspaceFiles": 2500
+  },
+  "tests": {
+    "passed": 19,
+    "failed": 0,
+    "warmBenchmarkStep": "PASS",
+    "allModeResultHashesEquivalent": true
+  },
+  "modes": {
+    "direct-cold": "fixed direct route, rebuild only requested derived body each request",
+    "ignition-cold": "generic relevance/dependency route, rebuild requested body each request",
+    "ignition-warm": "generic route with persistent state-bound materialization cache",
+    "eager-warm": "materialize full capability body once and retain it"
+  },
+  "measurements": [
+    {
+      "scenario": "dependencies",
+      "requests": 20,
+      "directColdTotalMs": 318.548502,
+      "ignitionColdTotalMs": 301.272515,
+      "ignitionWarmTotalMs": 12.494761,
+      "eagerWarmTotalMs": 102.198594,
+      "directColdLaterMedianMs": 14.18532,
+      "ignitionColdLaterMedianMs": 14.290218,
+      "ignitionWarmLaterMedianMs": 0.075945,
+      "eagerWarmLaterMedianMs": 0.077527,
+      "ignitionWarmCacheBytes": 39728,
+      "eagerWarmCacheBytes": 962268,
+      "observedIgnitionWarmVsDirectBreakEvenIteration": 1
+    },
+    {
+      "scenario": "search",
+      "requests": 8,
+      "directColdTotalMs": 678.683014,
+      "ignitionColdTotalMs": 633.764826,
+      "ignitionWarmTotalMs": 89.990034,
+      "eagerWarmTotalMs": 108.131873,
+      "directColdLaterMedianMs": 76.885343,
+      "ignitionColdLaterMedianMs": 72.145094,
+      "ignitionWarmLaterMedianMs": 0.373155,
+      "eagerWarmLaterMedianMs": 0.360295,
+      "ignitionWarmCacheBytes": 837720,
+      "eagerWarmCacheBytes": 962268,
+      "observedIgnitionWarmVsDirectBreakEvenIteration": 1
+    },
+    {
+      "scenario": "report",
+      "requests": 6,
+      "directColdTotalMs": 604.122276,
+      "ignitionColdTotalMs": 573.742489,
+      "ignitionWarmTotalMs": 114.924161,
+      "eagerWarmTotalMs": 110.844083,
+      "ignitionWarmLaterMedianMs": 1.062448,
+      "eagerWarmLaterMedianMs": 1.152865,
+      "ignitionWarmCacheBytes": 962268,
+      "eagerWarmCacheBytes": 962268,
+      "observedIgnitionWarmVsEagerWarmBreakEvenIteration": null,
+      "interpretation": "Honest no-memory-advantage case. All seven bodies are relevant. Eager-warm was slightly faster in this hosted sample; timing is observational, not statistically established."
+    },
+    {
+      "scenario": "breadth",
+      "requests": 12,
+      "directColdTotalMs": 539.364961,
+      "ignitionColdTotalMs": 504.585283,
+      "ignitionWarmTotalMs": 107.409975,
+      "eagerWarmTotalMs": 122.647038,
+      "ignitionWarmCacheBytes": 962268,
+      "eagerWarmCacheBytes": 962268,
+      "interpretation": "Ignition begins narrow but eventually touches all bodies; its retained cache therefore converges to eager size."
+    }
+  ],
+  "strongestSupportedClaim": "A state-bound warm materialization cache can eliminate repeated derived-state rebuilds while preserving exact results. Its retained-memory advantage exists only while the touched capability set remains narrower than the full body; when all capabilities become relevant, cache size converges to eager and orchestration can be neutral or slightly slower.",
+  "boundaries": [
+    "Single hosted-run timings are observations, not a statistical performance distribution.",
+    "Does not prove universal speedup.",
+    "Does not prove free compute, created RAM, or free energy.",
+    "Does not prove optimal cache eviction or mutation handling beyond full state-hash invalidation.",
+    "Does not prove warm-cache superiority when the entire body is routinely required."
+  ],
+  "nextGate": "Add adaptive cache policy and request-breadth selection: choose direct, cold Ignition, warm Ignition, or eager retention from measured reuse/breadth/resource conditions instead of assuming one mode is universally best."
+}
