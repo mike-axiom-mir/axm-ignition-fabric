@@ -1,18 +1,26 @@
 {
   "schema": "axm.ignition-warm-evidence/v0.04",
-  "status": "MEASURED_IN_HARNESS",
-  "testedHead": "9be1b055c570922e68ecd9e68be847e284a42921",
-  "githubActionsRunId": 33331597801,
+  "status": "MEASURED_IN_HARNESS_WITH_TIMING_CORRECTION",
+  "originalTestedHead": "9be1b055c570922e68ecd9e68be847e284a42921",
+  "originalGithubActionsRunId": 33331597801,
+  "timingCorrection": {
+    "reason": "The original warm-session timing started after state hashing and planning, while other paths included more lifecycle work. Those cross-mode timing values were therefore not apples-to-apples.",
+    "correctedHead": "8d4303220b7a72de058014bd7a89d790702df162",
+    "correctedGithubActionsRunId": 33331984076,
+    "timerBoundary": "outer wall-clock around complete run call; warm-session teardown excluded",
+    "originalTimingValuesSupersededForCrossModeClaims": true,
+    "structuralCacheAndMaterializationByteEvidenceStillValid": true
+  },
   "environment": {
     "os": "Ubuntu 24.04.4 LTS",
     "node": "v22.23.2",
     "workspaceFiles": 2500
   },
   "tests": {
-    "passed": 19,
-    "failed": 0,
-    "warmBenchmarkStep": "PASS",
-    "allModeResultHashesEquivalent": true
+    "correctedRunPassed": true,
+    "unitTestsPassed": 26,
+    "allModeResultHashesEquivalent": true,
+    "warmBenchmarkStep": "PASS"
   },
   "modes": {
     "direct-cold": "fixed direct route, rebuild only requested derived body each request",
@@ -20,70 +28,71 @@
     "ignition-warm": "generic route with persistent state-bound materialization cache",
     "eager-warm": "materialize full capability body once and retain it"
   },
-  "measurements": [
+  "correctedMeasurements": [
     {
       "scenario": "dependencies",
       "requests": 20,
-      "directColdTotalMs": 318.548502,
-      "ignitionColdTotalMs": 301.272515,
-      "ignitionWarmTotalMs": 12.494761,
-      "eagerWarmTotalMs": 102.198594,
-      "directColdLaterMedianMs": 14.18532,
-      "ignitionColdLaterMedianMs": 14.290218,
-      "ignitionWarmLaterMedianMs": 0.075945,
-      "eagerWarmLaterMedianMs": 0.077527,
+      "directColdTotalMs": 304.663986,
+      "ignitionColdTotalMs": 583.824682,
+      "ignitionWarmTotalMs": 293.495788,
+      "eagerWarmTotalMs": 373.518647,
+      "directColdLaterMedianMs": 13.555171,
+      "ignitionColdLaterMedianMs": 27.116743,
+      "ignitionWarmLaterMedianMs": 13.067358,
+      "eagerWarmLaterMedianMs": 12.67192,
       "ignitionWarmCacheBytes": 39728,
       "eagerWarmCacheBytes": 962268,
-      "observedIgnitionWarmVsDirectBreakEvenIteration": 1
+      "observedIgnitionWarmVsDirectBreakEvenIteration": 4
     },
     {
       "scenario": "search",
       "requests": 8,
-      "directColdTotalMs": 678.683014,
-      "ignitionColdTotalMs": 633.764826,
-      "ignitionWarmTotalMs": 89.990034,
-      "eagerWarmTotalMs": 108.131873,
-      "directColdLaterMedianMs": 76.885343,
-      "ignitionColdLaterMedianMs": 72.145094,
-      "ignitionWarmLaterMedianMs": 0.373155,
-      "eagerWarmLaterMedianMs": 0.360295,
+      "directColdTotalMs": 650.693693,
+      "ignitionColdTotalMs": 727.179319,
+      "ignitionWarmTotalMs": 212.548777,
+      "eagerWarmTotalMs": 225.163169,
+      "directColdLaterMedianMs": 73.625399,
+      "ignitionColdLaterMedianMs": 82.291,
+      "ignitionWarmLaterMedianMs": 14.919591,
+      "eagerWarmLaterMedianMs": 14.555219,
       "ignitionWarmCacheBytes": 837720,
       "eagerWarmCacheBytes": 962268,
-      "observedIgnitionWarmVsDirectBreakEvenIteration": 1
+      "observedIgnitionWarmVsDirectBreakEvenIteration": 2
     },
     {
       "scenario": "report",
       "requests": 6,
-      "directColdTotalMs": 604.122276,
-      "ignitionColdTotalMs": 573.742489,
-      "ignitionWarmTotalMs": 114.924161,
-      "eagerWarmTotalMs": 110.844083,
-      "ignitionWarmLaterMedianMs": 1.062448,
-      "eagerWarmLaterMedianMs": 1.152865,
+      "directColdTotalMs": 581.280407,
+      "ignitionColdTotalMs": 653.621776,
+      "ignitionWarmTotalMs": 203.59647,
+      "eagerWarmTotalMs": 210.116719,
+      "ignitionWarmLaterMedianMs": 16.981937,
+      "eagerWarmLaterMedianMs": 17.471603,
       "ignitionWarmCacheBytes": 962268,
       "eagerWarmCacheBytes": 962268,
-      "observedIgnitionWarmVsEagerWarmBreakEvenIteration": null,
-      "interpretation": "Honest no-memory-advantage case. All seven bodies are relevant. Eager-warm was slightly faster in this hosted sample; timing is observational, not statistically established."
+      "observedIgnitionWarmVsEagerWarmBreakEvenIteration": 1,
+      "interpretation": "No memory advantage because every capability is relevant. The two warm modes are close enough that one hosted sample must not be treated as a universal speed winner."
     },
     {
       "scenario": "breadth",
       "requests": 12,
-      "directColdTotalMs": 539.364961,
-      "ignitionColdTotalMs": 504.585283,
-      "ignitionWarmTotalMs": 107.409975,
-      "eagerWarmTotalMs": 122.647038,
+      "directColdTotalMs": 492.57514,
+      "ignitionColdTotalMs": 664.574148,
+      "ignitionWarmTotalMs": 294.32062,
+      "eagerWarmTotalMs": 290.570418,
       "ignitionWarmCacheBytes": 962268,
       "eagerWarmCacheBytes": 962268,
-      "interpretation": "Ignition begins narrow but eventually touches all bodies; its retained cache therefore converges to eager size."
+      "observedIgnitionWarmVsDirectBreakEvenIteration": 6,
+      "interpretation": "Breadth eventually fills the Ignition cache to eager size. In this corrected hosted sample eager-warm was slightly faster overall."
     }
   ],
-  "strongestSupportedClaim": "A state-bound warm materialization cache can eliminate repeated derived-state rebuilds while preserving exact results. Its retained-memory advantage exists only while the touched capability set remains narrower than the full body; when all capabilities become relevant, cache size converges to eager and orchestration can be neutral or slightly slower.",
+  "strongestSupportedClaim": "A state-bound warm materialization cache eliminates repeated reconstruction of still-valid derived state while preserving exact results. With equal wall-clock boundaries, warm Ignition becomes competitive or advantageous only after enough reuse amortizes routing/state-validation costs. Its memory advantage disappears once the touched capability set reaches the full body.",
   "boundaries": [
-    "Single hosted-run timings are observations, not a statistical performance distribution.",
+    "Corrected timing values are still single hosted-run observations, not a statistical performance distribution.",
     "Does not prove universal speedup.",
     "Does not prove free compute, created RAM, or free energy.",
-    "Does not prove optimal cache eviction or mutation handling beyond full state-hash invalidation.",
-    "Does not prove warm-cache superiority when the entire body is routinely required."
+    "Does not prove optimal cache eviction or partial invalidation.",
+    "Does not prove Ignition should replace direct or eager modes."
   ],
-  "nextGate": "Add adaptive cache policy and request-breadth selection: choose direct, cold Ignition, warm Ignition, or eager retention from measured reuse/breadth/resource conditions instead of assuming one mode is universally best."
+  "nextGate": "Use the corrected timing boundary while testing an adaptive Governor, then eliminate avoidable orchestration work such as duplicate canonical-state fingerprinting before judging Governor performance."
 }
