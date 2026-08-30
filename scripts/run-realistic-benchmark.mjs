@@ -40,7 +40,7 @@ for (const scenario of selected) {
       executeMs: ignition.executeMs,
       totalElapsedMs: ignition.totalElapsedMs,
     },
-    saved: { actualMaterializedBytes, measuredArrayBufferBytesSaved },
+    saved: { actualMaterializedBytes: actualSavedBytes, measuredArrayBufferBytesSaved },
   };
 
   console.log(JSON.stringify(result));
