@@ -1,0 +1,106 @@
+{
+  "schema": "axm.ignition-domain-identity-evidence/v0.09",
+  "status": "MEASURED_IN_HARNESS",
+  "implementationHead": "07ef22703ae6a02dcbd8a183a9fba6a908362d97",
+  "githubActionsRunId": 33337444905,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "workspaceFiles": 2500,
+    "samplesPerScenario": 5,
+    "transitionsPerSample": 6,
+    "freshProcessPerSample": true
+  },
+  "tests": {
+    "passed": 48,
+    "failed": 0,
+    "allPreviousBenchmarkRungs": "PASS",
+    "domainIdentityBenchmark": "PASS"
+  },
+  "pathScenario": {
+    "changedDomainRevisions": {
+      "metadata": 7,
+      "content-hash": 1,
+      "imports": 1,
+      "lint": 1,
+      "risk": 1,
+      "symbols": 1,
+      "tokens": 1
+    },
+    "fullInvalidation": {
+      "runtimeMedianMs": 420.045676,
+      "materializedBytesMedian": 6056540,
+      "cacheHitsMedian": 0,
+      "wholeStateFingerprintMedianMs": 113.050832
+    },
+    "versionedDomainIdentity": {
+      "runtimeMedianMs": 83.610953,
+      "materializedBytesMedian": 1030220,
+      "cacheHitsMedian": 6,
+      "domainInvalidatedBytesMedian": 165000,
+      "domainIdentityBuildMedianMs": 457.508259
+    },
+    "observedRuntimeDeltaMs": 336.434723,
+    "avoidedMaterializationBytes": 5026320,
+    "extraCacheHits": 6,
+    "identityConstructionExtraVsWholeFingerprintMs": 344.457427,
+    "naiveSynchronousTotal": {
+      "fullFingerprintPlusRuntimeMs": 533.096508,
+      "domainIdentityPlusRuntimeMs": 541.119212,
+      "domainIdentityDeltaMs": -8.022704,
+      "interpretation": "When naive full-scan identity construction is charged synchronously, this hosted median is slightly slower despite much cheaper cache execution."
+    }
+  },
+  "importScenario": {
+    "changedDomainRevisions": {
+      "content-hash": 7,
+      "imports": 7,
+      "lint": 1,
+      "metadata": 1,
+      "risk": 1,
+      "symbols": 1,
+      "tokens": 1
+    },
+    "fullInvalidation": {
+      "runtimeMedianMs": 408.521821,
+      "materializedBytesMedian": 6142136,
+      "cacheHitsMedian": 0,
+      "wholeStateFingerprintMedianMs": 110.725027
+    },
+    "versionedDomainIdentity": {
+      "runtimeMedianMs": 72.829352,
+      "materializedBytesMedian": 1115816,
+      "cacheHitsMedian": 6,
+      "domainInvalidatedBytesMedian": 238368,
+      "domainIdentityBuildMedianMs": 465.511446
+    },
+    "observedRuntimeDeltaMs": 335.692469,
+    "avoidedMaterializationBytes": 5026320,
+    "extraCacheHits": 6,
+    "identityConstructionExtraVsWholeFingerprintMs": 354.786419,
+    "naiveSynchronousTotal": {
+      "fullFingerprintPlusRuntimeMs": 519.246848,
+      "domainIdentityPlusRuntimeMs": 538.340798,
+      "domainIdentityDeltaMs": -19.09395,
+      "interpretation": "When naive full-scan identity construction is charged synchronously, this hosted median is slower despite much cheaper cache execution."
+    }
+  },
+  "correctness": [
+    "Body validity is keyed only to explicitly declared canonical source domains.",
+    "Path-only mutation increments metadata revision only.",
+    "Same-width import mutation increments imports and content-hash revisions only.",
+    "Unknown body/domain binding is invalidated instead of guessed valid.",
+    "Positional workspace reorder is now visible to all positional domain identities.",
+    "Every benchmark output is bound to a precomputed fresh direct-baseline result hash."
+  ],
+  "strongestSupportedClaim": "Versioned canonical domain identities and per-body validity keys can preserve derived bodies across unrelated whole-state changes while retaining exact outputs. In the current 2,500-file harness this materially reduces cache execution and reconstruction, but the naive full-scan construction of all domain identities is expensive enough to erase the measured runtime advantage when charged synchronously.",
+  "boundaries": [
+    "Does not prove domain identity construction is cheap.",
+    "Does not prove end-to-end speedup with the current full-scan identity builder.",
+    "Does not prove automatic semantic dependency inference.",
+    "Does not prove production-scale superiority or global cache optimality.",
+    "Five hosted samples reduce single-run noise but are not a broad statistical performance distribution.",
+    "No created RAM, free compute, free energy, or universal speedup claim."
+  ],
+  "nextGate": "Replace full-scan domain identity construction with deterministic incremental domain revision updates driven by trusted canonical mutation/transition receipts. Measure receipt/update cost against whole-state hashing and prove unchanged domain hashes do not need rescanning."
+}
