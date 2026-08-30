@@ -1,4 +1,5 @@
 import { CapabilityRegistry, hashValue } from "./ignition-core.js";
+import { validateTransitionReceipt } from "./scoped-invalidation.js";
 
 function deterministicCandidateOrder(entries, policy) {
   return [...entries].sort((a, b) => {
@@ -17,18 +18,21 @@ function deterministicCandidateOrder(entries, policy) {
 }
 
 export class BudgetedRetentionSession {
-  constructor({ registry, maxCacheBytes, policy = "value" }) {
+  constructor({ registry, maxCacheBytes, policy = "value", invalidationResolver = null }) {
     if (!(registry instanceof CapabilityRegistry)) throw new Error("registry must be CapabilityRegistry");
     if (!Number.isSafeInteger(maxCacheBytes) || maxCacheBytes < 0) throw new Error("maxCacheBytes must be a non-negative safe integer");
     if (!["none", "lru", "value"].includes(policy)) throw new Error("policy must be none, lru, or value");
+    if (invalidationResolver !== null && typeof invalidationResolver !== "function") throw new Error("invalidationResolver must be a function or null");
     this.registry = registry;
     this.maxCacheBytes = maxCacheBytes;
     this.policy = policy;
+    this.invalidationResolver = invalidationResolver;
     this.cache = new Map();
     this.stateHash = null;
     this.runNumber = 0;
     this.closed = false;
     this.evictionHistory = [];
+    this.transitionHistory = [];
   }
 
   get cacheBytes() {
@@ -66,12 +70,17 @@ export class BudgetedRetentionSession {
     return receipt;
   }
 
-  async releaseAll(context = {}, reason = "release-all") {
+  async #releaseIds(ids, context = {}, reason = "release-ids") {
     const receipts = [];
-    for (const id of this.cachedCapabilityIds) {
+    for (const id of [...new Set(ids || [])].sort()) {
       const receipt = await this.#releaseEntry(id, context, reason);
       if (receipt) receipts.push(receipt);
     }
+    return receipts;
+  }
+
+  async releaseAll(context = {}, reason = "release-all") {
+    const receipts = await this.#releaseIds(this.cachedCapabilityIds, context, reason);
     this.stateHash = null;
     return receipts;
   }
@@ -80,6 +89,40 @@ export class BudgetedRetentionSession {
     if (this.closed) return;
     await this.releaseAll(context, "session-close");
     this.closed = true;
+  }
+
+  async applyTransition({ transitionReceipt, state = null, invalidationResolver = this.invalidationResolver }) {
+    if (this.closed) throw new Error("BudgetedRetentionSession is closed");
+    if (this.stateHash === null) throw new Error("cannot apply transition before session has a canonical state");
+    if (typeof invalidationResolver !== "function") throw new Error("trusted transition requires an invalidationResolver");
+
+    validateTransitionReceipt(transitionReceipt, { expectedFrom: this.stateHash });
+    const resolution = invalidationResolver({
+      transitionReceipt,
+      cachedCapabilityIds: this.cachedCapabilityIds,
+    });
+    const invalidatedCapabilityIds = [...new Set(resolution?.invalidatedCapabilityIds || [])].sort();
+    const staleReleases = await this.#releaseIds(
+      invalidatedCapabilityIds,
+      { state },
+      "transition-stale"
+    );
+    this.stateHash = transitionReceipt.toStateHash;
+
+    const receipt = {
+      schema: "axm.ignition-budget-transition/v0.08",
+      transitionReceiptHash: transitionReceipt.receiptHash,
+      changedDomains: [...transitionReceipt.changedDomains],
+      invalidatedCapabilityIds,
+      releasedCapabilityIds: staleReleases.map((entry) => entry.capabilityId).sort(),
+      releasedBytes: staleReleases.reduce((sum, entry) => sum + entry.allocatedBytes, 0),
+      retainedValidCapabilityIds: this.cachedCapabilityIds,
+      retainedValidBytes: this.cacheBytes,
+      cacheBudgetBytes: this.maxCacheBytes,
+      resultingStateHash: this.stateHash,
+    };
+    this.transitionHistory.push(receipt);
+    return receipt;
   }
 
   async #evictForBytes(requiredBytes, protectedId, context) {
@@ -99,22 +142,23 @@ export class BudgetedRetentionSession {
 
   async run({ request, state = {}, stateFingerprint = null }) {
     if (this.closed) throw new Error("BudgetedRetentionSession is closed");
+    if (stateFingerprint !== null && typeof stateFingerprint !== "string") throw new Error("stateFingerprint must be a string or null");
     const stateHash = stateFingerprint ?? hashValue(state);
     let invalidatedForStateChange = [];
     if (this.stateHash !== null && this.stateHash !== stateHash) {
-      invalidatedForStateChange = await this.releaseAll({ request, state }, "state-change");
+      invalidatedForStateChange = await this.releaseAll({ request, state }, "unreceipted-state-change");
     }
     this.stateHash = stateHash;
     this.runNumber += 1;
 
     const matched = this.registry.matched(request, state);
     if (matched.length !== 1 || (matched[0].dependencies || []).length !== 0) {
-      throw new Error("v0.07 budgeted retention supports exactly one dependency-free matched capability per request");
+      throw new Error("v0.08 budgeted retention supports exactly one dependency-free matched capability per request");
     }
     const capability = matched[0];
     const cached = this.cache.get(capability.id);
     let entry = cached;
-    let cacheHit = Boolean(cached);
+    const cacheHit = Boolean(cached);
     let materializedBytes = 0;
     let materializeMs = 0;
     let retained = true;
@@ -163,11 +207,13 @@ export class BudgetedRetentionSession {
       this.cache.set(capability.id, entry);
     }
 
+    if (this.cacheBytes > this.maxCacheBytes) throw new Error("hard cache budget invariant violated");
+
     const result = { [capability.id]: output };
     return {
       result,
       receipt: {
-        schema: "axm.ignition-budgeted-retention-run/v0.07",
+        schema: "axm.ignition-budgeted-retention-run/v0.08",
         policy: this.policy,
         runNumber: this.runNumber,
         capabilityId: capability.id,
