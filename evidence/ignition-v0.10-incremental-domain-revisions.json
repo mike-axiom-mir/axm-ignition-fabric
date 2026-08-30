@@ -1,0 +1,108 @@
+{
+  "schema": "axm.ignition-evidence/v0.10",
+  "rung": "incremental-canonical-domain-revisions",
+  "sourceRun": {
+    "githubActionsRunId": 33342230505,
+    "head": "13ce8f68df068bc455c127c74b9bdabd8384a9ca",
+    "status": "PASS",
+    "tests": { "passed": 56, "failed": 0 }
+  },
+  "fixture": {
+    "files": 2500,
+    "transitions": 6,
+    "samplesPerMode": 5,
+    "cacheBudgetBytes": 900000,
+    "modes": ["full-state", "full-domain", "incremental"]
+  },
+  "path": {
+    "fullState": {
+      "runtimeMedianMs": 416.876476,
+      "chargedEndToEndMedianMs": 536.752915,
+      "stateFingerprintMedianMs": 119.876439,
+      "materializedBytesMedian": 6056540,
+      "cacheHitsMedian": 0
+    },
+    "fullDomain": {
+      "runtimeMedianMs": 88.108581,
+      "chargedEndToEndMedianMs": 607.321611,
+      "stateFingerprintMedianMs": 116.325464,
+      "fullDomainBuildMedianMs": 403.077352,
+      "materializedBytesMedian": 1030220,
+      "cacheHitsMedian": 6
+    },
+    "incremental": {
+      "runtimeMedianMs": 87.786552,
+      "chargedEndToEndMedianMs": 273.328578,
+      "stateFingerprintMedianMs": 121.267299,
+      "bootstrapMedianMs": 55.828571,
+      "mutationReceiptBuildMedianMs": 1.056739,
+      "incrementalUpdateMedianMs": 10.991464,
+      "incrementalIdentityExtraMedianMs": 68.332614,
+      "materializedBytesMedian": 1030220,
+      "cacheHitsMedian": 6,
+      "transitionFilesInspected": 6,
+      "transitionDomainsRehashed": 6
+    },
+    "observedMedianDelta": {
+      "incrementalVsFullStateEndToEndMs": 263.424337,
+      "incrementalVsFullDomainEndToEndMs": 333.993033,
+      "materializedBytesAvoidedVsFullState": 5026320,
+      "identityExtraMsAvoidedVsFullDomain": 334.744738,
+      "extraCacheHitsVsFullState": 6
+    }
+  },
+  "import": {
+    "fullState": {
+      "runtimeMedianMs": 411.794833,
+      "chargedEndToEndMedianMs": 531.137434,
+      "stateFingerprintMedianMs": 121.535231,
+      "materializedBytesMedian": 6142136,
+      "cacheHitsMedian": 0
+    },
+    "fullDomain": {
+      "runtimeMedianMs": 74.590121,
+      "chargedEndToEndMedianMs": 602.590816,
+      "stateFingerprintMedianMs": 119.083791,
+      "fullDomainBuildMedianMs": 412.410204,
+      "materializedBytesMedian": 1115816,
+      "cacheHitsMedian": 6
+    },
+    "incremental": {
+      "runtimeMedianMs": 75.193511,
+      "chargedEndToEndMedianMs": 265.724214,
+      "stateFingerprintMedianMs": 122.500170,
+      "bootstrapMedianMs": 55.909801,
+      "mutationReceiptBuildMedianMs": 1.127523,
+      "incrementalUpdateMedianMs": 10.305385,
+      "incrementalIdentityExtraMedianMs": 67.463084,
+      "materializedBytesMedian": 1115816,
+      "cacheHitsMedian": 6,
+      "transitionFilesInspected": 6,
+      "transitionDomainsRehashed": 12
+    },
+    "observedMedianDelta": {
+      "incrementalVsFullStateEndToEndMs": 265.413220,
+      "incrementalVsFullDomainEndToEndMs": 336.866602,
+      "materializedBytesAvoidedVsFullState": 5026320,
+      "identityExtraMsAvoidedVsFullDomain": 344.947120,
+      "extraCacheHitsVsFullState": 6
+    }
+  },
+  "correctness": {
+    "incrementalIdentityEqualsExactFullScanReference": true,
+    "staleReceiptRejected": true,
+    "tamperedReceiptRejected": true,
+    "wrongTargetEntryRejected": true,
+    "missingReceiptFallsBackToFullRecompute": true,
+    "structuralReorderFallsBackToFullRecompute": true,
+    "unchangedDomainEntryArraysRetained": true
+  },
+  "truthBoundary": [
+    "Point-incremental updates are proven only for the explicit single-file mutation contract in this harness.",
+    "The mutation receipt binds before/after entries for all seven canonical domains of the changed file and is checked against the cached base plus the actual target file.",
+    "Canonical from/to state hashes are treated as upstream truth inputs. Their construction cost is still charged separately in the benchmark.",
+    "Structural edits, missing evidence, or unsupported mutation shapes fall back to full recomputation.",
+    "Five hosted samples reduce single-run noise but do not establish a broad statistical performance distribution.",
+    "This does not prove universal speedup, production-scale superiority, automatic semantic dependency inference, created RAM, free compute, or free energy."
+  ]
+}
