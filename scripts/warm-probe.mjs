@@ -55,12 +55,22 @@ let totalMaterializedBytes = 0;
 try {
   for (const request of sequence) {
     let outcome;
+    const wallStarted = performance.now();
     if (mode === "direct-cold") {
       outcome = await runDirectRealisticBaseline({ request, state, registry });
+    } else if (mode === "ignition-cold") {
+      outcome = await executeIgnitionRun({ registry, request, state, mode: "ignition" });
+    } else {
+      outcome = await session.run({ request, state });
+    }
+    const wallElapsedMs = performance.now() - wallStarted;
+
+    if (mode === "direct-cold") {
       totalMaterializedBytes += outcome.receipt.actualMaterializedBytes;
       runs.push({
         kind: request.kind,
-        elapsedMs: outcome.receipt.totalElapsedMs,
+        elapsedMs: wallElapsedMs,
+        internalElapsedMs: outcome.receipt.totalElapsedMs,
         materializeMs: outcome.receipt.materializeMs,
         executeMs: outcome.receipt.executeMs,
         newlyMaterializedBytes: outcome.receipt.actualMaterializedBytes,
@@ -68,11 +78,11 @@ try {
         resultHash: outcome.receipt.resultHash,
       });
     } else if (mode === "ignition-cold") {
-      outcome = await executeIgnitionRun({ registry, request, state, mode: "ignition" });
       totalMaterializedBytes += outcome.receipt.actualMaterializedBytes;
       runs.push({
         kind: request.kind,
-        elapsedMs: outcome.receipt.elapsedMs,
+        elapsedMs: wallElapsedMs,
+        internalElapsedMs: outcome.receipt.elapsedMs,
         materializeMs: outcome.receipt.materializationReceipts.reduce((sum, receipt) => sum + receipt.elapsedMs, 0),
         executeMs: outcome.receipt.capabilityReceipts.reduce((sum, receipt) => sum + receipt.elapsedMs, 0),
         newlyMaterializedBytes: outcome.receipt.actualMaterializedBytes,
@@ -80,11 +90,11 @@ try {
         resultHash: outcome.receipt.resultHash,
       });
     } else {
-      outcome = await session.run({ request, state });
       totalMaterializedBytes += outcome.receipt.newlyMaterializedBytes;
       runs.push({
         kind: request.kind,
-        elapsedMs: outcome.receipt.totalElapsedMs,
+        elapsedMs: wallElapsedMs,
+        internalElapsedMs: outcome.receipt.totalElapsedMs,
         materializeMs: outcome.receipt.materializeMs,
         executeMs: outcome.receipt.executeMs,
         newlyMaterializedBytes: outcome.receipt.newlyMaterializedBytes,
@@ -100,7 +110,8 @@ try {
   const laterElapsed = elapsed.slice(1);
 
   console.log(JSON.stringify({
-    schema: "axm.ignition-warm-probe/v0.04",
+    schema: "axm.ignition-warm-probe/v0.05",
+    timerBoundary: "outer wall-clock around complete run call; warm-session teardown excluded",
     mode,
     scenario,
     fileCount,
@@ -114,6 +125,7 @@ try {
     finalCachedCapabilityIds: session?.cachedCapabilityIds || [],
     newBytesPerRun: runs.map((run) => run.newlyMaterializedBytes),
     elapsedMsPerRun: elapsed,
+    internalElapsedMsPerRun: runs.map((run) => run.internalElapsedMs),
     memoryObservation: {
       arrayBuffersDelta: afterWarm.arrayBuffers - before.arrayBuffers,
       externalDelta: afterWarm.external - before.external,
