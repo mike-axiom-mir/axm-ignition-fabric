@@ -28,3 +28,5 @@ jobs:
         run: npm run benchmark:warm
       - name: Run adaptive Governor benchmark
         run: npm run benchmark:governor
+      - name: Run scoped invalidation benchmark
+        run: npm run benchmark:invalidation
