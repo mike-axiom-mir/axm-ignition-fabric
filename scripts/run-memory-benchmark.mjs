@@ -1,12 +1,14 @@
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const scenarios = process.argv.slice(2);
 const selected = scenarios.length ? scenarios : ["numbers", "text", "lookup", "mixed", "heavy"];
+const probePath = fileURLToPath(new URL("./memory-probe.mjs", import.meta.url));
 
 function runProbe(mode, scenario) {
   const stdout = execFileSync(
     process.execPath,
-    ["--expose-gc", new URL("./memory-probe.mjs", import.meta.url).pathname, mode, scenario],
+    ["--expose-gc", probePath, mode, scenario],
     { encoding: "utf8" }
   );
   return JSON.parse(stdout.trim());
