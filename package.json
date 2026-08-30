@@ -1,11 +1,12 @@
 {
   "name": "axm-ignition-fabric",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test",
     "demo": "node scripts/run-demo.mjs",
-    "benchmark:memory": "node scripts/run-memory-benchmark.mjs"
+    "benchmark:memory": "node scripts/run-memory-benchmark.mjs",
+    "benchmark:realistic": "node scripts/run-realistic-benchmark.mjs"
   }
 }
