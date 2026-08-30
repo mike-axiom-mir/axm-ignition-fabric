@@ -1,45 +1,91 @@
 import { CapabilityRegistry } from "./ignition-core.js";
 
+function allocationFactory(bytes, marker) {
+  return () => {
+    const scratch = new Uint8Array(bytes);
+    scratch.fill(marker);
+    return {
+      instance: { scratch },
+      allocatedBytes: scratch.byteLength,
+    };
+  };
+}
+
+function demoCapability({ id, bytes, marker, dependencies = [], match, run }) {
+  return {
+    id,
+    dependencies,
+    resourceEstimateBytes: bytes,
+    materialize: allocationFactory(bytes, marker),
+    match,
+    run,
+  };
+}
+
 export function buildDemoRegistry() {
   return new CapabilityRegistry([
-    {
+    demoCapability({
       id: "normalize-numbers",
-      resourceEstimateBytes: 8_192,
+      bytes: 2 * 1024 * 1024,
+      marker: 11,
       match: (request) => request.kind === "numbers" || request.kind === "mixed",
-      run: ({ request }) => (request.values || []).map((value) => Math.trunc(Number(value) || 0)),
-    },
-    {
+      run: ({ request, runtime }) => {
+        runtime.scratch[0] ^= 1;
+        return (request.values || []).map((value) => Math.trunc(Number(value) || 0));
+      },
+    }),
+    demoCapability({
       id: "sum-numbers",
       dependencies: ["normalize-numbers"],
-      resourceEstimateBytes: 4_096,
+      bytes: 1 * 1024 * 1024,
+      marker: 22,
       match: (request) => request.kind === "numbers" || request.kind === "mixed",
-      run: ({ dependencies }) => dependencies["normalize-numbers"].reduce((sum, value) => sum + value, 0),
-    },
-    {
+      run: ({ dependencies, runtime }) => {
+        runtime.scratch[0] ^= 1;
+        return dependencies["normalize-numbers"].reduce((sum, value) => sum + value, 0);
+      },
+    }),
+    demoCapability({
       id: "tokenize-text",
-      resourceEstimateBytes: 16_384,
+      bytes: 3 * 1024 * 1024,
+      marker: 33,
       match: (request) => request.kind === "text" || request.kind === "mixed",
-      run: ({ request }) => String(request.text || "").trim().split(/\s+/).filter(Boolean),
-    },
-    {
+      run: ({ request, runtime }) => {
+        runtime.scratch[0] ^= 1;
+        return String(request.text || "").trim().split(/\s+/).filter(Boolean);
+      },
+    }),
+    demoCapability({
       id: "count-tokens",
       dependencies: ["tokenize-text"],
-      resourceEstimateBytes: 4_096,
+      bytes: 1 * 1024 * 1024,
+      marker: 44,
       match: (request) => request.kind === "text" || request.kind === "mixed",
-      run: ({ dependencies }) => dependencies["tokenize-text"].length,
-    },
-    {
+      run: ({ dependencies, runtime }) => {
+        runtime.scratch[0] ^= 1;
+        return dependencies["tokenize-text"].length;
+      },
+    }),
+    demoCapability({
       id: "state-lookup",
-      resourceEstimateBytes: 2_048,
+      bytes: 512 * 1024,
+      marker: 55,
       match: (request) => request.kind === "lookup" || request.kind === "mixed",
-      run: ({ request, state }) => state[request.key] ?? null,
-    },
-    {
+      run: ({ request, state, runtime }) => {
+        runtime.scratch[0] ^= 1;
+        return state[request.key] ?? null;
+      },
+    }),
+    demoCapability({
       id: "irrelevant-heavy-capability",
-      resourceEstimateBytes: 1_048_576,
+      bytes: 16 * 1024 * 1024,
+      marker: 66,
       match: (request) => request.kind === "heavy",
-      run: () => ({ status: "materialized-only-when-requested" }),
-    },
+      run: ({ runtime }) => {
+        runtime.scratch[0] ^= 1;
+        return { status: "materialized-only-when-requested" };
+      },
+    }),
   ]);
 }
 
