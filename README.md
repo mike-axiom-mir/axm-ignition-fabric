@@ -2,9 +2,9 @@
 
 Experimental AXM research branch for testing whether a software body can keep large capability/state possibility dormant, materialize only the workset required by the current event, execute within explicit resource bounds, merge the result deterministically back into persistent truth, and release the temporary workset.
 
-## v0.02 research question
+## v0.03 research question
 
-Can on-demand materialization reduce the **real runtime allocation footprint** versus eager materialization **without changing deterministic results**?
+Does on-demand materialization still reduce real runtime allocation and work when capability bodies contain **actual parsed/indexed state**, rather than synthetic memory blobs, while preserving deterministic results?
 
 ## Core loop
 
@@ -19,52 +19,61 @@ persistent truth + capability registry
         -> release temporary workset
 ```
 
-## Current proof harness
-
-The harness compares two modes over the same deterministic request:
+## Baselines
 
 - **Eager:** materialize the full registered capability body, then execute only the relevant dependency closure.
 - **Ignition:** materialize and execute only the relevant dependency closure.
 
-Both modes must execute the same relevant capabilities and produce the same deterministic result hash.
+Both modes execute the same relevant capabilities and must produce the same deterministic result hash.
 
-v0.02 adds real `Uint8Array` working bodies to the demo capabilities. Each materialization returns an exact allocation receipt derived from the allocated array's `byteLength`.
+## v0.02 physical allocation harness
 
-The isolated memory benchmark launches fresh Node processes with `--expose-gc` and records:
+The synthetic harness uses real `Uint8Array` working bodies and isolated child processes. It measures `arrayBuffers`, `external`, `rss`, and `heapUsed` before and after materialization. This established that dormant irrelevant capability bodies can reduce actual runtime ArrayBuffer allocation in the bounded fixture.
 
-- `process.memoryUsage().arrayBuffers`
-- `external`
-- `rss`
-- `heapUsed`
+Allocator boundary: dropping runtime references does **not** guarantee immediate OS/backing-store memory return. Post-release process memory is therefore observational, not a pass/fail invariant.
 
-before materialization, after materialization and after release.
+## v0.03 realistic parsed/indexed workload
 
-The strongest automated assertion is currently the ArrayBuffer working-set comparison because it directly tracks the allocated demo bodies and is less allocator/noise-sensitive than RSS.
+The realistic harness builds a deterministic 2,500-file software workspace and materializes derived capability bodies that do real work:
 
-## What this does and does not prove
+- metadata index
+- dependency index parsed from imports
+- symbol index parsed from exports
+- token-occurrence search index
+- duplicate-content hash index
+- lint-marker index
+- report risk projection
 
-Current evidence can prove, for this bounded harness:
+GitHub Actions run `33330862222` passed all tests and all six realistic comparisons.
 
-- Ignition materializes fewer capability bodies for narrow requests.
-- those bodies are real runtime allocations, not only declared estimates.
-- eager and Ignition execute the same relevant capability closure.
-- eager and Ignition produce the same result hash.
-- explicit release hooks are called and runtime bodies are not copied into receipts.
+Measured examples from that run:
 
-Important allocator boundary:
+| Request | Eager materialized | Ignition materialized | Bytes saved | Eager materialize | Ignition materialize |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| dependencies | 7 | 1 | 922,540 | 101.70 ms | 1.94 ms |
+| symbols | 7 | 1 | 922,448 | 96.38 ms | 5.52 ms |
+| search | 7 | 1 | 124,548 | 92.55 ms | 74.31 ms |
+| duplicates | 7 | 1 | 952,268 | 92.63 ms | 4.09 ms |
+| lint | 7 | 1 | 959,768 | 97.64 ms | 0.50 ms |
+| report | 7 | 7 | **0** | 92.29 ms | 93.25 ms |
 
-Dropping runtime references does **not** guarantee that Node immediately returns backing-store/RSS memory to the operating system. Therefore post-release process memory is observed but is not a pass/fail invariant.
+All eager/Ignition result hashes were equivalent.
 
-This does **not** prove:
+The report case is intentionally retained as a counterexample: when every capability body is relevant, Ignition has no materialization saving. One-run timing differences are not treated as statistically meaningful.
 
-- software creates RAM, CPU cycles, energy or free compute;
+## Current supported claim
+
+For these deterministic harnesses, keeping irrelevant capability bodies dormant can reduce actual derived runtime allocation while preserving exact results. In the parsed/indexed workspace test, narrow requests also substantially reduced materialization work. The advantage shrinks when the requested capability itself dominates the body and disappears when all capability bodies are required.
+
+## This does NOT prove
+
+- software creates RAM, CPU cycles, energy, or free compute;
 - lower total RSS on every runtime/workload;
 - immediate OS-level memory return after release;
-- lower CPU cost once materialization overhead is included;
 - production-scale savings;
-- universal superiority over ordinary eager architecture.
-
-Any measured gain must come from avoiding unnecessary activation, reusing deterministic results, compacting derivable state, or scheduling real resources more efficiently.
+- universal superiority over eager software;
+- a statistically established runtime speedup from one CI sample per scenario;
+- warm-cache or repeated-run superiority.
 
 ## Run
 
@@ -74,7 +83,23 @@ Requires a current Node.js runtime.
 npm test
 npm run demo
 npm run benchmark:memory
+npm run benchmark:realistic
 ```
+
+Evidence receipts:
+
+- `evidence/ignition-v0.02-ci-memory.json`
+- `evidence/ignition-v0.03-realistic-workload.json`
+
+## Next evidence gate
+
+Add warm/repeated execution and a direct specialized baseline to measure:
+
+- allocation churn
+- cache/reuse benefits
+- orchestration overhead
+- request-breadth break-even
+- when eager/direct execution is actually cheaper
 
 ## Lane rule
 
@@ -86,4 +111,4 @@ Current lane: issue #2 / `axm/ignition-v0.01-materialization-core`.
 
 ## Evidence discipline
 
-Do not promote architecture proposals into verified capability. Keep baseline, tests, receipts and benchmark evidence together so improvements can be compared against simpler eager execution.
+Do not promote architecture proposals into verified capability. Keep baselines, failed runs, repairs, receipts, and benchmark evidence together so every improvement can be compared against simpler execution.
