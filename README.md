@@ -49,12 +49,17 @@ Current evidence can prove, for this bounded harness:
 - those bodies are real runtime allocations, not only declared estimates.
 - eager and Ignition execute the same relevant capability closure.
 - eager and Ignition produce the same result hash.
-- released bodies can disappear from the live ArrayBuffer working set after references are dropped and GC runs.
+- explicit release hooks are called and runtime bodies are not copied into receipts.
+
+Important allocator boundary:
+
+Dropping runtime references does **not** guarantee that Node immediately returns backing-store/RSS memory to the operating system. Therefore post-release process memory is observed but is not a pass/fail invariant.
 
 This does **not** prove:
 
 - software creates RAM, CPU cycles, energy or free compute;
 - lower total RSS on every runtime/workload;
+- immediate OS-level memory return after release;
 - lower CPU cost once materialization overhead is included;
 - production-scale savings;
 - universal superiority over ordinary eager architecture.
