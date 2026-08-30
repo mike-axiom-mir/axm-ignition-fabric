@@ -1,6 +1,6 @@
 {
   "name": "axm-ignition-fabric",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,6 +11,7 @@
     "benchmark:warm": "node scripts/run-warm-benchmark.mjs",
     "benchmark:governor": "node scripts/run-governor-benchmark.mjs",
     "benchmark:invalidation": "node scripts/run-scoped-invalidation-benchmark.mjs",
-    "benchmark:retention": "node scripts/run-retention-benchmark.mjs"
+    "benchmark:retention": "node scripts/run-retention-benchmark.mjs",
+    "benchmark:truth-budget": "node scripts/run-truth-budget-benchmark.mjs"
   }
 }
