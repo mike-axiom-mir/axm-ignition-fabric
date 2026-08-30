@@ -1,4 +1,5 @@
 import { CapabilityRegistry, hashValue } from "./ignition-core.js";
+import { validateTransitionReceipt } from "./scoped-invalidation.js";
 
 function dependencyClosure(registry, initial) {
   const selected = new Map(initial.map((capability) => [capability.id, capability]));
@@ -48,20 +49,50 @@ export class IgnitionSession {
   get cachedCapabilityIds() { return [...this.cache.keys()].sort(); }
 
   async #releaseEntries(entries, { request = null, state = null } = {}) {
+    let releasedBytes = 0;
+    const releasedCapabilityIds = [];
     for (const [id, entry] of [...entries].reverse()) {
       const capability = this.registry.get(id);
       if (capability?.release) await capability.release(Object.freeze({ request, state, mode: this.mode, runtime: entry.instance }));
+      releasedBytes += entry.allocatedBytes || 0;
+      releasedCapabilityIds.push(id);
       this.cache.delete(id);
     }
+    return { releasedBytes, releasedCapabilityIds: releasedCapabilityIds.sort() };
   }
-  async releaseAll(context = {}) { await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; }
+  async releaseAll(context = {}) { const result = await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; return result; }
   async close(context = {}) { if (this.closed) return; await this.releaseAll(context); this.closed = true; }
+
+  async applyTransition({ transitionReceipt, invalidatedCapabilityIds = [], state = null }) {
+    if (this.closed) throw new Error("IgnitionSession is closed");
+    if (this.stateHash === null) throw new Error("cannot apply transition before session has a canonical state");
+    validateTransitionReceipt(transitionReceipt, { expectedFrom: this.stateHash });
+    const requested = [...new Set(invalidatedCapabilityIds)].sort();
+    const entries = requested.filter((id) => this.cache.has(id)).map((id) => [id, this.cache.get(id)]);
+    const released = await this.#releaseEntries(entries, { state });
+    this.stateHash = transitionReceipt.toStateHash;
+    return {
+      schema: "axm.ignition-session-transition/v0.06",
+      transitionReceiptHash: transitionReceipt.receiptHash,
+      changedDomains: [...transitionReceipt.changedDomains],
+      invalidatedCapabilityIds: requested,
+      releasedCapabilityIds: released.releasedCapabilityIds,
+      releasedBytes: released.releasedBytes,
+      retainedCapabilityIds: this.cachedCapabilityIds,
+      retainedBytes: this.cacheBytes,
+      resultingStateHash: this.stateHash,
+    };
+  }
 
   async run({ request, state = {}, stateFingerprint = null }) {
     if (this.closed) throw new Error("IgnitionSession is closed");
     if (stateFingerprint !== null && typeof stateFingerprint !== "string") throw new Error("stateFingerprint must be a string or null");
     const nextStateHash = stateFingerprint ?? hashValue(state);
-    if (this.stateHash !== null && this.stateHash !== nextStateHash) await this.releaseAll({ request, state });
+    let fallbackInvalidation = null;
+    if (this.stateHash !== null && this.stateHash !== nextStateHash) {
+      const released = await this.releaseAll({ request, state });
+      fallbackInvalidation = { reason: "unreceipted-state-change", releasedCapabilityIds: released.releasedCapabilityIds, releasedBytes: released.releasedBytes };
+    }
     this.stateHash = nextStateHash;
 
     const started = performance.now();
@@ -89,8 +120,8 @@ export class IgnitionSession {
     const executeMs = performance.now() - executeStarted;
     const result = Object.fromEntries(Object.keys(outputs).sort().map((id) => [id, outputs[id]]));
     return { result, receipt: {
-      schema: "axm.ignition-session-run/v0.05", mode: this.mode, requestHash: hashValue(request), stateHash: nextStateHash,
-      stateFingerprintReused: stateFingerprint !== null,
+      schema: "axm.ignition-session-run/v0.06", mode: this.mode, requestHash: hashValue(request), stateHash: nextStateHash,
+      stateFingerprintReused: stateFingerprint !== null, fallbackInvalidation,
       matchedCapabilityIds: matched.map((capability) => capability.id), executedCapabilityIds: ordered.map((capability) => capability.id),
       newlyMaterializedCapabilityIds, newMaterializationReceipts, newlyMaterializedBytes,
       reusedCapabilityIds: target.filter((capability) => !newlyMaterializedCapabilityIds.includes(capability.id)).map((capability) => capability.id),
