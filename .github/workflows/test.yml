@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+    branches:
+      - "axm/ignition-v0.01-materialization-core"
+  pull_request:
+
+jobs:
+  node-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run tests
+        run: npm test
+      - name: Run deterministic comparison demo
+        run: npm run demo
