@@ -32,3 +32,5 @@ jobs:
         run: npm run benchmark:invalidation
       - name: Run hard-budget retention benchmark
         run: npm run benchmark:retention
+      - name: Run truth-aware hard-budget benchmark
+        run: npm run benchmark:truth-budget
