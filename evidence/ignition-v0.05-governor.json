@@ -1,0 +1,141 @@
+{
+  "schema": "axm.ignition-governor-evidence/v0.05",
+  "status": "MEASURED_IN_HARNESS",
+  "testedHead": "04adb831f0524b99155508bd7a6fbb8829f474ae",
+  "githubActionsRunId": 33332165101,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "workspaceFiles": 2500
+  },
+  "tests": {
+    "passed": 27,
+    "failed": 0,
+    "fingerprintHandoffTest": "PASS",
+    "adaptiveGovernorBenchmark": "PASS",
+    "allGovernedResultsEquivalentToDirectBaseline": true
+  },
+  "timingMethod": {
+    "boundary": "outer wall-clock around complete run/governor call; warm-session teardown excluded; reference verification excluded from Governor timing",
+    "correction": "Earlier v0.04 cross-mode timings were corrected because warm-session internal timing excluded state hashing/planning. evidence/ignition-v0.04-warm-break-even.json records the supersession.",
+    "distributionBoundary": "Single hosted samples are observations, not statistically established distributions."
+  },
+  "canonicalFingerprintRepair": {
+    "mechanism": "Governor computes the deterministic state fingerprint once and hands it into direct-cold, ignition-cold, or warm session execution. Selected execution receipts prove stateFingerprintReused=true.",
+    "preRepairEvidence": "evidence/ignition-v0.05-governor-pre-fingerprint.json",
+    "observedWallTimeChanges": [
+      {
+        "case": "narrow-repeat",
+        "preRepairGovernorTotalMs": 348.405952,
+        "postRepairGovernorTotalMs": 150.761836,
+        "differenceMs": -197.644116
+      },
+      {
+        "case": "search-tight-cache",
+        "preRepairGovernorTotalMs": 428.082911,
+        "postRepairGovernorTotalMs": 302.751572,
+        "differenceMs": -125.331339
+      },
+      {
+        "case": "report-high-cache",
+        "preRepairGovernorTotalMs": 324.589326,
+        "postRepairGovernorTotalMs": 176.761272,
+        "differenceMs": -147.828054
+      },
+      {
+        "case": "report-tight-cache",
+        "preRepairGovernorTotalMs": 414.664877,
+        "postRepairGovernorTotalMs": 250.847969,
+        "differenceMs": -163.816908
+      },
+      {
+        "case": "breadth-growth",
+        "preRepairGovernorTotalMs": 501.963143,
+        "postRepairGovernorTotalMs": 269.863217,
+        "differenceMs": -232.099926
+      },
+      {
+        "case": "state-churn",
+        "preRepairGovernorTotalMs": 62.869468,
+        "postRepairGovernorTotalMs": 27.294819,
+        "differenceMs": -35.574649
+      }
+    ],
+    "interpretation": "The size and consistency of the reduction supports the diagnosis that redundant full-state fingerprinting was a major avoidable orchestration cost in this harness. It does not isolate every timing contributor or establish a general performance law."
+  },
+  "policyMeasurements": [
+    {
+      "case": "narrow-repeat",
+      "requests": 12,
+      "cacheBudgetBytes": 100000,
+      "modeCounts": {"direct-cold": 1, "ignition-warm": 11},
+      "governorWallTotalMs": 150.761836,
+      "fixedDirectColdTotalMs": 155.782266,
+      "fixedIgnitionWarmTotalMs": 149.562218,
+      "fixedEagerWarmTotalMs": 227.896071,
+      "finalCacheBytes": 39728,
+      "interpretation": "After one direct measurement, Governor promotes the repeated narrow route to warm Ignition. In this sample its full wall time is close to the oracle fixed warm mode while retaining only the narrow body."
+    },
+    {
+      "case": "search-tight-cache",
+      "requests": 5,
+      "cacheBudgetBytes": 200000,
+      "modeCounts": {"direct-cold": 5},
+      "governorWallTotalMs": 302.751572,
+      "fixedDirectColdTotalMs": 354.877133,
+      "fixedIgnitionWarmTotalMs": 143.519515,
+      "fixedEagerWarmTotalMs": 156.767192,
+      "finalCacheBytes": 0,
+      "interpretation": "The 837,720-byte search body exceeds the configured 200,000-byte retention budget, so Governor deliberately refuses the faster warm options. Resource policy is separate from unconstrained speed."
+    },
+    {
+      "case": "report-high-cache",
+      "requests": 6,
+      "cacheBudgetBytes": 2000000,
+      "modeCounts": {"ignition-cold": 1, "eager-warm": 5},
+      "governorWallTotalMs": 176.761272,
+      "fixedDirectColdTotalMs": 470.196643,
+      "fixedIgnitionWarmTotalMs": 166.287423,
+      "fixedEagerWarmTotalMs": 169.106248,
+      "finalCacheBytes": 962268,
+      "interpretation": "Broad repeated work is measured once then promoted to eager retention because every capability is relevant and the body fits budget. The remaining ~8-11 ms sample gap versus oracle warm modes is a learning/policy tax, not hidden."
+    },
+    {
+      "case": "report-tight-cache",
+      "requests": 4,
+      "cacheBudgetBytes": 500000,
+      "modeCounts": {"ignition-cold": 4},
+      "governorWallTotalMs": 250.847969,
+      "finalCacheBytes": 0,
+      "interpretation": "Full 962,268-byte body exceeds retention budget, so Governor remains cold even though repeated warm execution would be faster with more memory."
+    },
+    {
+      "case": "breadth-growth",
+      "requests": 12,
+      "cacheBudgetBytes": 2000000,
+      "modeCounts": {"direct-cold": 5, "ignition-cold": 1, "ignition-warm": 6},
+      "governorWallTotalMs": 269.863217,
+      "finalCacheBytes": 962268,
+      "interpretation": "The cache starts narrow and grows as new routes become repeatedly relevant. Once the request set touches all bodies, retained cache size converges to eager size."
+    },
+    {
+      "case": "state-churn",
+      "requests": 8,
+      "cacheBudgetBytes": 100000,
+      "modeCounts": {"direct-cold": 7, "ignition-warm": 1},
+      "governorWallTotalMs": 27.294819,
+      "finalCacheBytes": 0,
+      "interpretation": "After the measured state-change rate crosses threshold, Governor abandons warm retention and returns to direct cold execution."
+    }
+  ],
+  "strongestSupportedClaim": "In this deterministic harness, an adaptive Governor can preserve exact results while selecting among direct-cold, ignition-cold, ignition-warm and eager-warm according to observed route breadth, reuse, cache budget and state churn. Sharing one canonical state fingerprint removes a large avoidable orchestration cost. The best execution mode remains conditional on workload and resource policy.",
+  "boundaries": [
+    "Does not prove the Governor is globally optimal.",
+    "Does not prove universal speedup or production-scale superiority.",
+    "Single hosted timing samples are observations, not statistical distributions.",
+    "Current state mutation invalidates the whole warm cache; partial invalidation is not implemented.",
+    "Cache eviction is still coarse rather than value-aware.",
+    "Does not create RAM, compute, energy, or hardware resources."
+  ],
+  "nextGate": "Replace full-cache invalidation with deterministic dependency-scoped invalidation and add value-aware cache eviction under a hard memory budget. Compare against the current whole-state invalidation Governor and fixed modes."
+}
