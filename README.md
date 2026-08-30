@@ -2,11 +2,11 @@
 
 Experimental AXM research branch for testing whether a software body can keep large capability/state possibility dormant, materialize only the workset required by the current event, execute within explicit resource bounds, merge the result deterministically back into persistent truth, and release or retain work according to grounded reuse/resource conditions.
 
-## v0.05 research question
+## v0.06 research question
 
-Can the runtime choose among direct, cold, warm, and eager execution instead of treating Ignition as a universal mode?
+When canonical truth changes, can the runtime invalidate only derived bodies whose declared source domains changed instead of throwing away the complete warm body?
 
-The adaptive Governor must preserve exact results, respect memory limits, react to state churn, and be allowed to choose **NOT IGNITION**.
+The scoped path must preserve exact results and must fall back to full invalidation whenever the transition evidence is missing, stale, or not safely mapped.
 
 ## Core loop
 
@@ -14,12 +14,13 @@ The adaptive Governor must preserve exact results, respect memory limits, react 
 canonical truth + capability registry
         -> request / event
         -> one canonical state fingerprint
-        -> relevance / breadth / reuse / budget check
-        -> choose execution mode
+        -> choose direct / cold / warm / eager execution
         -> materialize or reuse bounded workset
-        -> execute exact relevant closure
-        -> deterministic result / receipt
-        -> retain useful body OR stay cold
+        -> deterministic result
+        -> canonical transition receipt
+        -> resolve affected source domains
+        -> invalidate only dependent cached bodies
+        -> retain unaffected verified bodies
 ```
 
 ## Evidence ladder
@@ -50,38 +51,25 @@ Narrow requests save derived-state allocation. A broad report uses every body an
 
 ### v0.04 - warm reuse + corrected break-even timing
 
-Four fixed modes:
+Four fixed modes are compared with equal outer wall-clock boundaries:
 
 - **direct-cold** - fixed direct route, rebuild requested body
 - **Ignition-cold** - generic relevance/dependency route, rebuild requested body
 - **Ignition-warm** - generic route with state-bound cache
 - **eager-warm** - retain the complete body
 
-Important correction:
+The first v0.04 timing harness had an unfair boundary because warm-session internal timing began after state hashing/planning. Those original cross-mode speed numbers are explicitly superseded in `evidence/ignition-v0.04-warm-break-even.json`. The allocation/cache evidence remains valid.
 
-The first v0.04 timing harness used an unfair boundary: warm-session internal timing began after state hashing/planning. Those early cross-mode speed numbers are superseded. Allocation/cache evidence remains valid.
+Corrected findings:
 
-Corrected equal-boundary run `33331984076` used an outside stopwatch around the complete run call:
+- warm reuse avoids repeated derived-body reconstruction;
+- narrow repeated work can retain far less than eager;
+- search is a weaker case because the requested search index dominates the body;
+- broad work can fill the Ignition cache until it equals eager size;
+- warm benefit must amortize routing/state-validation cost;
+- direct or eager execution can be the grounded choice.
 
-| Scenario | Requests | Direct cold | Ignition cold | Ignition warm | Eager warm | Ignition cache | Eager cache |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| dependencies | 20 | 304.66 ms | 583.82 ms | **293.50 ms** | 373.52 ms | 39,728 B | 962,268 B |
-| search | 8 | 650.69 ms | 727.18 ms | **212.55 ms** | 225.16 ms | 837,720 B | 962,268 B |
-| report | 6 | 581.28 ms | 653.62 ms | **203.60 ms** | 210.12 ms | 962,268 B | 962,268 B |
-| breadth | 12 | 492.58 ms | 664.57 ms | 294.32 ms | **290.57 ms** | 962,268 B | 962,268 B |
-
-Single hosted-run timings are observations, not statistical performance distributions.
-
-Findings:
-
-1. Warm reuse eliminates repeated derived-body reconstruction.
-2. On narrow repeated work, warm Ignition retains much less memory than eager.
-3. Search keeps only a small memory advantage because the requested search index dominates the body.
-4. When every capability becomes relevant, Ignition and eager retain the same body.
-5. Warm benefit must amortize routing/state-validation cost. In the corrected dependency sample, Ignition-warm crossed direct-cold at observed iteration 4.
-6. Breadth growth eventually fills the cache, so eager can be just as appropriate.
-
-### v0.05 - adaptive Governor
+### v0.05 - adaptive Governor + shared truth fingerprint
 
 The Governor chooses among:
 
@@ -92,59 +80,103 @@ Ignition-warm
 eager-warm
 ```
 
-Inputs currently include:
+using route breadth, reuse, measured capability bytes, cache budget, retained cache contents and canonical state-change rate.
 
-- route breadth
-- route reuse
-- measured per-capability bytes
-- cache budget
-- retained cache contents
-- canonical state-change rate
+The first Governor benchmark exposed a large avoidable orchestration cost: the same 2,500-file canonical state was fingerprinted once by the Governor and again by the selected execution path.
 
-Policy examples:
-
-- first narrow route -> direct-cold
-- repeated narrow route that fits budget -> Ignition-warm
-- repeated broad route that fits budget -> eager-warm
-- body larger than cache budget -> stay cold
-- high state churn -> avoid warm retention
-
-The first Governor benchmark exposed a large orchestration cost. Inspection showed canonical state was fingerprinted in the Governor and then fingerprinted again inside the selected path.
-
-That failed efficiency shape is preserved in:
+That pre-repair baseline is preserved in:
 
 - `evidence/ignition-v0.05-governor-pre-fingerprint.json`
 
-The repaired Governor computes the canonical fingerprint once and hands it into the chosen direct/cold/warm path. A dedicated test proves selected execution receipts reuse that fingerprint.
+The repaired Governor computes one canonical fingerprint and hands it into the selected executor. `tests/fingerprint-handoff.test.mjs` proves the execution receipt reuses that exact fingerprint.
 
-GitHub Actions run `33332165101` passed **27/27 tests** plus all previous benchmarks and the adaptive Governor benchmark.
+Evidence:
 
-Observed post-repair samples:
+- `evidence/ignition-v0.05-governor.json`
 
-| Case | Governor policy | Governor total | Fixed comparison | Final cache |
-| --- | --- | ---: | --- | ---: |
-| narrow-repeat, 12 | 1 direct + 11 Ignition-warm | **150.76 ms** | direct 155.78 / Ignition-warm 149.56 / eager-warm 227.90 | 39,728 B |
-| search-tight-cache, 5 | 5 direct-cold | **302.75 ms** | direct 354.88 / unconstrained Ignition-warm 143.52 | 0 B |
-| report-high-cache, 6 | 1 Ignition-cold + 5 eager-warm | **176.76 ms** | direct 470.20 / Ignition-warm 166.29 / eager-warm 169.11 | 962,268 B |
-| report-tight-cache, 4 | 4 Ignition-cold | **250.85 ms** | warm retention refused by budget | 0 B |
-| breadth-growth, 12 | direct/cold -> incremental Ignition-warm | **269.86 ms** | cache eventually reaches full body | 962,268 B |
-| state-churn, 8 | 1 warm attempt then 7 direct-cold | **27.29 ms** | warm retention abandoned as truth changes | 0 B |
+Supported behavior:
 
-Important interpretation:
+- repeated narrow work may promote to Ignition-warm;
+- repeated broad work may promote to eager-warm;
+- a hard cache budget may deliberately reject a faster unconstrained warm mode;
+- high canonical state churn can return to cold execution;
+- broad route growth can fill the cache to eager size;
+- all governed outputs remain exactly equivalent to the deterministic direct baseline.
 
-- The Governor is not an oracle. It may pay a measurement/learning tax before it knows what should stay warm.
-- A cache budget may deliberately reject the fastest unconstrained mode.
-- Repeated broad work can justify eager retention.
-- Rapidly changing canonical truth can make retention wasteful.
-- Sharing one canonical fingerprint removed a major avoidable overhead in this harness.
+### v0.06 - deterministic dependency-scoped invalidation
+
+A warm session can now accept a hash-bound transition receipt:
+
+```text
+fromStateHash
++ toStateHash
++ changedDomains
++ evidence
++ receiptHash
+```
+
+The receipt is resolved against explicit capability/source-domain bindings.
+
+Current realistic-workload bindings:
+
+| Capability body | Source domain |
+| --- | --- |
+| metadata index | metadata |
+| dependency index | imports |
+| symbol index | symbols |
+| search index | tokens |
+| duplicate index | content-hash |
+| lint index | lint |
+| report projection | risk |
+
+Safety rules:
+
+- unknown binding -> invalidate by default;
+- wrong transition base -> reject receipt;
+- canonical state changed without a trusted transition receipt -> full cache invalidation;
+- scoped invalidation never changes canonical output expectations.
+
+GitHub Actions run `33332487877` passed **33/33 tests** plus the complete v0.01-v0.05 benchmark stack and the new scoped invalidation benchmark.
+
+#### Path-only mutation
+
+Five deterministic path changes affected only the `metadata` source domain.
+
+| Strategy | Rebuilt bytes | Measured transition + first-report wall time |
+| --- | ---: | ---: |
+| full invalidation | 4,811,340 B | 345.60 ms |
+| scoped invalidation | 137,500 B | 13.17 ms |
+| avoided rebuild | **4,673,840 B** | observed delta 332.43 ms |
+
+Each scoped transition released and rebuilt only the 27,500-byte metadata body while retaining the other six bodies.
+
+#### Import-target mutation
+
+Four same-width import-target changes affected `imports` and `content-hash` only.
+
+| Strategy | Rebuilt bytes | Measured transition + first-report wall time |
+| --- | ---: | ---: |
+| full invalidation | 3,849,072 B | 277.79 ms |
+| scoped invalidation | 198,912 B | 18.97 ms |
+| avoided rebuild | **3,650,160 B** | observed delta 258.82 ms |
+
+Each scoped transition released and rebuilt only the dependency index plus duplicate-content index, 49,728 bytes total per transition.
+
+Every resulting report hash matched a fresh direct baseline.
+
+Timing boundary: transition-receipt generation is upstream and excluded from these invalidation measurements. The measured interval includes cache release/invalidation plus the first report run against the new canonical state.
+
+Evidence:
+
+- `evidence/ignition-v0.06-scoped-invalidation.json`
 
 ## Current supported claim
 
-> In these deterministic harnesses, dormant capability materialization can reduce real derived runtime allocation, warm reuse can avoid repeated reconstruction, and an adaptive Governor can select or refuse retention based on measured workload/resource conditions while preserving exact outputs.
+> In these deterministic harnesses, dormant materialization can reduce real derived runtime allocation, warm reuse can avoid repeated reconstruction, an adaptive Governor can choose or refuse retention, and a trusted hash-bound change receipt can preserve unaffected warm bodies across canonical state changes while rebuilding only declared dependent bodies.
 
-The architecture is explicitly conditional:
+The architecture remains conditional:
 
-> **Use Ignition where dormant possibility or reusable derived state pays for the orchestration. Use direct/eager execution where it does not.**
+> **Use Ignition where dormant possibility or reusable derived state pays for the orchestration. Use direct/eager execution where it does not. When truth changes, reuse only what the evidence proves remains valid.**
 
 ## This does NOT prove
 
@@ -153,9 +185,12 @@ The architecture is explicitly conditional:
 - global Governor optimality;
 - production-scale superiority;
 - statistically established timing distributions from single hosted samples;
+- automatic discovery of arbitrary dependency semantics;
+- that upstream change receipts are free to compute;
 - optimal cache eviction;
-- cheap partial invalidation after state mutation;
-- that every AXM capability should be materialized this way.
+- that every AXM capability should use this runtime pattern.
+
+Scoped invalidation correctness depends on complete, truthful upstream transition evidence. The current domain bindings are explicit harness declarations, not universal semantic inference.
 
 ## Run
 
@@ -166,6 +201,7 @@ npm run benchmark:memory
 npm run benchmark:realistic
 npm run benchmark:warm
 npm run benchmark:governor
+npm run benchmark:invalidation
 ```
 
 Evidence receipts:
@@ -175,39 +211,33 @@ Evidence receipts:
 - `evidence/ignition-v0.04-warm-break-even.json`
 - `evidence/ignition-v0.05-governor-pre-fingerprint.json`
 - `evidence/ignition-v0.05-governor.json`
+- `evidence/ignition-v0.06-scoped-invalidation.json`
 
 ## Next evidence gate
 
-Current state changes invalidate the entire warm cache.
+Scoped invalidation can preserve useful cached bodies, but a real runtime also needs to decide what deserves scarce memory.
 
-Next research rung:
+Next rung:
 
-**deterministic dependency-scoped invalidation + value-aware eviction**
+**value-aware deterministic eviction under a hard memory budget**
 
-Instead of:
+Candidate evidence-bound inputs:
 
-```text
-anything changes -> discard every derived body
-```
+- body bytes
+- measured reconstruction/materialization cost
+- recent reuse count
+- recency
+- dependency/route relevance
+- cache budget
 
-try:
+The first policy must be simple, deterministic and inspectable. Compare it against at least:
 
-```text
-canonical change receipt
-        -> identify affected source/state domains
-        -> invalidate only dependent capability bodies
-        -> retain untouched verified bodies
-        -> enforce hard memory budget by measured reuse/value
-```
+- no retention;
+- retain-everything-until-budget-fails;
+- simple LRU/recency policy;
+- value-aware policy.
 
-Compare this against:
-
-- current whole-state invalidation Governor
-- fixed direct-cold
-- fixed Ignition-warm
-- fixed eager-warm
-
-The eviction/invalidation policy must preserve exact result equivalence and may choose to drop everything when that is the safer/cheaper decision.
+The value-aware policy must be allowed to lose. If LRU or no retention is cheaper for a workload, record that result rather than tuning the benchmark around the new policy.
 
 ## Lane rule
 
