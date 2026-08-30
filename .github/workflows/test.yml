@@ -24,3 +24,5 @@ jobs:
         run: npm run benchmark:memory
       - name: Run realistic parsed/indexed workload benchmark
         run: npm run benchmark:realistic
+      - name: Run warm/direct break-even benchmark
+        run: npm run benchmark:warm
