@@ -49,10 +49,18 @@ const requests = scenario === "path"
   ? [realisticRequests.search, { kind: "metadata" }]
   : [realisticRequests.search, realisticRequests.dependencies];
 
-// Verify direct truth before timing the retention strategies.
+// Establish direct truth before timing the retention strategies.
+const expectedHashes = [];
 for (let i = 0; i < states.length; i += 1) {
-  for (const request of requests) {
-    await runDirectRealisticBaseline({ request, state: states[i], registry: buildRealisticRegistry(), stateFingerprint: stateHashes[i] });
+  expectedHashes[i] = [];
+  for (let j = 0; j < requests.length; j += 1) {
+    const direct = await runDirectRealisticBaseline({
+      request: requests[j],
+      state: states[i],
+      registry: buildRealisticRegistry(),
+      stateFingerprint: stateHashes[i],
+    });
+    expectedHashes[i][j] = direct.receipt.resultHash;
   }
 }
 
@@ -67,18 +75,21 @@ let materializedBytes = 0;
 let hitCount = 0;
 let fullInvalidatedBytes = 0;
 let domainInvalidatedBytes = 0;
+let equivalent = true;
 const transitionReceipts = [];
 
 const started = performance.now();
 try {
   for (let i = 0; i < states.length; i += 1) {
-    for (const request of requests) {
+    for (let j = 0; j < requests.length; j += 1) {
+      const request = requests[j];
       const run = await session.run({
         request,
         state: states[i],
         stateFingerprint: stateHashes[i],
         domainIdentity: mode === "domain" ? identities[i] : null,
       });
+      if (run.receipt.resultHash !== expectedHashes[i][j]) equivalent = false;
       materializedBytes += run.receipt.materializedBytes;
       if (run.receipt.cacheHit) hitCount += 1;
       fullInvalidatedBytes += run.receipt.invalidatedForStateChange.reduce((sum, entry) => sum + entry.allocatedBytes, 0);
@@ -95,6 +106,7 @@ try {
           cacheBytesAfter: run.receipt.cacheBytesAfter,
           bodyIdentityHash: run.receipt.bodyIdentityHash,
           resultHash: run.receipt.resultHash,
+          expectedResultHash: expectedHashes[i][j],
         });
       }
     }
@@ -111,6 +123,7 @@ console.log(JSON.stringify({
   fileCount,
   transitionCount,
   requestCount: states.length * requests.length,
+  equivalent,
   runtimeWallMs,
   materializedBytes,
   hitCount,
@@ -122,3 +135,5 @@ console.log(JSON.stringify({
   transitionReceipts,
   timingBoundary: "Runtime timing excludes direct verification and identity construction. Whole-state fingerprint and domain-identity construction costs are reported separately.",
 }));
+
+if (!equivalent) process.exitCode = 1;
