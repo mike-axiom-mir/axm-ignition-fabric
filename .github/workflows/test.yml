@@ -30,3 +30,5 @@ jobs:
         run: npm run benchmark:governor
       - name: Run scoped invalidation benchmark
         run: npm run benchmark:invalidation
+      - name: Run hard-budget retention benchmark
+        run: npm run benchmark:retention
