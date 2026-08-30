@@ -34,3 +34,5 @@ jobs:
         run: npm run benchmark:retention
       - name: Run truth-aware hard-budget benchmark
         run: npm run benchmark:truth-budget
+      - name: Run versioned domain identity benchmark
+        run: npm run benchmark:domain-identity
