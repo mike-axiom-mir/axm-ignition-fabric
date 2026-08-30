@@ -102,9 +102,11 @@ function topoSort(capabilities) {
   return ordered;
 }
 
-function materialize(registry, request, state, mode) {
-  const direct = mode === "eager" ? registry.all() : registry.matched(request, state);
-  return dependencyClosure(registry, direct);
+function planRun(registry, request, state, mode) {
+  const matched = registry.matched(request, state);
+  const executable = dependencyClosure(registry, matched);
+  const materialized = mode === "eager" ? registry.all() : executable;
+  return { matched, executable, materialized };
 }
 
 export async function executeIgnitionRun({ registry, request, state = {}, mode = "ignition" }) {
@@ -112,8 +114,8 @@ export async function executeIgnitionRun({ registry, request, state = {}, mode =
   if (!["ignition", "eager"].includes(mode)) throw new Error("mode must be ignition or eager");
 
   const runId = `run-${hashValue({ request, state, mode })}`;
-  const materialized = materialize(registry, request, state, mode);
-  const ordered = topoSort(materialized);
+  const plan = planRun(registry, request, state, mode);
+  const ordered = topoSort(plan.executable);
   const started = performance.now();
   const outputs = {};
   const capabilityReceipts = [];
@@ -143,13 +145,16 @@ export async function executeIgnitionRun({ registry, request, state = {}, mode =
     mode,
     requestHash: hashValue(request),
     stateHash: hashValue(state),
-    materializedCapabilityIds: materialized.map((capability) => capability.id),
-    materializedCount: materialized.length,
-    estimatedWorkingSetBytes: materialized.reduce((sum, capability) => sum + capability.resourceEstimateBytes, 0),
+    matchedCapabilityIds: plan.matched.map((capability) => capability.id),
+    executedCapabilityIds: ordered.map((capability) => capability.id),
+    materializedCapabilityIds: plan.materialized.map((capability) => capability.id),
+    materializedCount: plan.materialized.length,
+    executedCount: ordered.length,
+    estimatedWorkingSetBytes: plan.materialized.reduce((sum, capability) => sum + capability.resourceEstimateBytes, 0),
     capabilityReceipts,
     resultHash: hashValue(merged),
     elapsedMs: performance.now() - started,
-    releasedCapabilityIds: materialized.map((capability) => capability.id),
+    releasedCapabilityIds: plan.materialized.map((capability) => capability.id),
   };
 
   return { result: merged, receipt };
@@ -162,5 +167,6 @@ export function compareEquivalentRuns(a, b) {
     rightHash: hashValue(b.result),
     workingSetDeltaBytes: a.receipt.estimatedWorkingSetBytes - b.receipt.estimatedWorkingSetBytes,
     materializedCountDelta: a.receipt.materializedCount - b.receipt.materializedCount,
+    executedCountDelta: a.receipt.executedCount - b.receipt.executedCount,
   };
 }
