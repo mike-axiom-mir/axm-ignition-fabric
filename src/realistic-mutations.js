@@ -1,4 +1,5 @@
 import { fnv1a32, hashValue } from "./ignition-core.js";
+import { createVersionedDomainIdentity } from "./domain-identity.js";
 import { createDomainInvalidationResolver, createTransitionReceipt } from "./scoped-invalidation.js";
 
 const encoder = new TextEncoder();
@@ -62,7 +63,7 @@ export function workspaceDomainHashes(state) {
   state.files.forEach((file, index) => {
     const signatures = fileDomainSignatures(file);
     for (const domain of REALISTIC_DOMAINS) {
-      // Index and id are intentionally included because current derived arrays are positional.
+      // Position and id are intentionally included because current derived arrays are positional.
       parts[domain].push(`${index}|${file.id}|${signatures[domain]}`);
     }
   });
@@ -72,6 +73,14 @@ export function workspaceDomainHashes(state) {
       hashValue({ domain, fileCount: state.files.length, entries: parts[domain] }),
     ])
   ));
+}
+
+export function createWorkspaceDomainIdentity(state, previousIdentity = null) {
+  return createVersionedDomainIdentity({
+    stateHash: hashValue(state),
+    domainHashes: workspaceDomainHashes(state),
+    previousIdentity,
+  });
 }
 
 export function diffWorkspaceDomains(before, after) {
