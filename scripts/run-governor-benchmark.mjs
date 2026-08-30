@@ -38,10 +38,17 @@ async function runCase({ name, requests, states, cacheBudgetBytes, fixed = null 
     for (let i = 0; i < requests.length; i += 1) {
       const request = requests[i];
       const state = states[i];
+      const wallStarted = performance.now();
       const governed = await governor.run({ request, state });
+      const governorWallElapsedMs = performance.now() - wallStarted;
+
       const reference = await runDirectRealisticBaseline({ request, state, registry: referenceRegistry });
       if (governed.receipt.resultHash !== reference.receipt.resultHash) equivalent = false;
-      decisions.push(governed.receipt);
+      decisions.push({
+        ...governed.receipt,
+        wallElapsedMs: governorWallElapsedMs,
+        internalElapsedMs: governed.receipt.elapsedMs,
+      });
     }
 
     let fixedObservation = null;
@@ -55,6 +62,7 @@ async function runCase({ name, requests, states, cacheBudgetBytes, fixed = null 
         ["eager-warm", eagerWarm.totalElapsedMs],
       ].sort((a, b) => a[1] - b[1]);
       fixedObservation = {
+        timerBoundary: direct.timerBoundary,
         directColdTotalMs: direct.totalElapsedMs,
         ignitionWarmTotalMs: ignitionWarm.totalElapsedMs,
         eagerWarmTotalMs: eagerWarm.totalElapsedMs,
@@ -65,13 +73,15 @@ async function runCase({ name, requests, states, cacheBudgetBytes, fixed = null 
 
     const result = {
       schema: "axm.ignition-governor-benchmark/v0.05",
+      timerBoundary: "outer wall-clock around complete governor.run call; reference verification excluded",
       name,
       requestCount: requests.length,
       cacheBudgetBytes,
       equivalent,
       modeCounts: counts(decisions.map((decision) => decision.selectedMode)),
       reasonCounts: counts(decisions.map((decision) => decision.reason)),
-      governorTotalElapsedMs: decisions.reduce((sum, decision) => sum + decision.elapsedMs, 0),
+      governorTotalElapsedMs: decisions.reduce((sum, decision) => sum + decision.wallElapsedMs, 0),
+      governorInternalElapsedMs: decisions.reduce((sum, decision) => sum + decision.internalElapsedMs, 0),
       finalRetainedCacheBytes: decisions.at(-1)?.retainedCacheBytes || 0,
       finalRetainedCapabilities: decisions.at(-1)?.retainedCacheCapabilityIds || [],
       decisions: decisions.map((decision) => ({
@@ -83,6 +93,8 @@ async function runCase({ name, requests, states, cacheBudgetBytes, fixed = null 
         retainedCacheBytes: decision.retainedCacheBytes,
         stateChangeRate: decision.stateChangeRate,
         resultHash: decision.resultHash,
+        wallElapsedMs: decision.wallElapsedMs,
+        internalElapsedMs: decision.internalElapsedMs,
       })),
       fixedObservation,
     };
