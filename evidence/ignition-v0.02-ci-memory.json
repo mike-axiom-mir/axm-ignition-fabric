@@ -60,11 +60,18 @@
       "ignitionRssDeltaBytes": 16908288
     }
   ],
+  "followUpCorrection": {
+    "triggeringRunId": 33328296356,
+    "observation": "A later CI run showed that Node may retain ArrayBuffer backing-store/allocator memory after runtime references are dropped, so immediate post-release process-memory decrease is not a deterministic invariant.",
+    "repair": "Removed the allocator-sensitive release assertion. Release is now tested through explicit release-hook execution, released capability IDs, and absence of runtime bodies from receipts.",
+    "effectOnMainFinding": "None. The eager-vs-Ignition after-materialize ArrayBuffer allocation comparison and exact result equivalence remained the supported evidence."
+  },
   "strongestSupportedClaim": "For this deterministic harness, keeping irrelevant capability bodies dormant reduced actual runtime ArrayBuffer working-set allocation while preserving exact result hashes.",
   "boundaries": [
     "Does not prove created RAM.",
     "Does not prove free compute or energy.",
     "Does not prove lower RSS for every runtime or workload.",
+    "Does not prove immediate operating-system memory return after release.",
     "Does not prove lower total CPU cost after materialization and scheduling overhead.",
     "Does not prove production-scale savings or universal superiority over eager architecture."
   ],
