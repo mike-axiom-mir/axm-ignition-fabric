@@ -2,7 +2,7 @@ import { fnv1a32, hashValue } from "./ignition-core.js";
 import { createDomainInvalidationResolver, createTransitionReceipt } from "./scoped-invalidation.js";
 
 const encoder = new TextEncoder();
-const DOMAINS = ["content-hash", "imports", "lint", "metadata", "risk", "symbols", "tokens"];
+export const REALISTIC_DOMAINS = Object.freeze(["content-hash", "imports", "lint", "metadata", "risk", "symbols", "tokens"]);
 
 export const REALISTIC_DOMAIN_BINDINGS = Object.freeze({
   "workspace-metadata-index": ["metadata"],
@@ -56,20 +56,28 @@ function fileDomainSignatures(file) {
   };
 }
 
-export function diffWorkspaceDomains(before, after) {
-  if (!before || !after || !Array.isArray(before.files) || !Array.isArray(after.files)) throw new Error("workspace states require files arrays");
-  if (before.files.length !== after.files.length) return [...DOMAINS];
+export function workspaceDomainHashes(state) {
+  if (!state || !Array.isArray(state.files)) throw new Error("workspace state requires files array");
+  const parts = Object.fromEntries(REALISTIC_DOMAINS.map((domain) => [domain, []]));
+  state.files.forEach((file, index) => {
+    const signatures = fileDomainSignatures(file);
+    for (const domain of REALISTIC_DOMAINS) {
+      // Index and id are intentionally included because current derived arrays are positional.
+      parts[domain].push(`${index}|${file.id}|${signatures[domain]}`);
+    }
+  });
+  return Object.freeze(Object.fromEntries(
+    REALISTIC_DOMAINS.map((domain) => [
+      domain,
+      hashValue({ domain, fileCount: state.files.length, entries: parts[domain] }),
+    ])
+  ));
+}
 
-  const changed = new Set();
-  const afterById = new Map(after.files.map((file) => [file.id, file]));
-  for (const oldFile of before.files) {
-    const newFile = afterById.get(oldFile.id);
-    if (!newFile) return [...DOMAINS];
-    const a = fileDomainSignatures(oldFile);
-    const b = fileDomainSignatures(newFile);
-    for (const domain of DOMAINS) if (a[domain] !== b[domain]) changed.add(domain);
-  }
-  return [...changed].sort();
+export function diffWorkspaceDomains(before, after) {
+  const a = workspaceDomainHashes(before);
+  const b = workspaceDomainHashes(after);
+  return REALISTIC_DOMAINS.filter((domain) => a[domain] !== b[domain]);
 }
 
 export function createWorkspaceTransitionReceipt(before, after) {
