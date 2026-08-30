@@ -57,15 +57,22 @@ function fileDomainSignatures(file) {
   };
 }
 
+export function workspaceFileDomainEntries(state, index) {
+  if (!state || !Array.isArray(state.files)) throw new Error("workspace state requires files array");
+  if (!Number.isInteger(index) || index < 0 || index >= state.files.length) throw new Error("workspace file index out of range");
+  const file = state.files[index];
+  const signatures = fileDomainSignatures(file);
+  return Object.freeze(Object.fromEntries(
+    REALISTIC_DOMAINS.map((domain) => [domain, `${index}|${file.id}|${signatures[domain]}`])
+  ));
+}
+
 export function workspaceDomainHashes(state) {
   if (!state || !Array.isArray(state.files)) throw new Error("workspace state requires files array");
   const parts = Object.fromEntries(REALISTIC_DOMAINS.map((domain) => [domain, []]));
-  state.files.forEach((file, index) => {
-    const signatures = fileDomainSignatures(file);
-    for (const domain of REALISTIC_DOMAINS) {
-      // Position and id are intentionally included because current derived arrays are positional.
-      parts[domain].push(`${index}|${file.id}|${signatures[domain]}`);
-    }
+  state.files.forEach((_file, index) => {
+    const entries = workspaceFileDomainEntries(state, index);
+    for (const domain of REALISTIC_DOMAINS) parts[domain].push(entries[domain]);
   });
   return Object.freeze(Object.fromEntries(
     REALISTIC_DOMAINS.map((domain) => [
