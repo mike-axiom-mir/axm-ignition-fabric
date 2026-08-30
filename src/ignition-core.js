@@ -29,6 +29,12 @@ export class CapabilityRegistry {
     if (this.capabilities.has(capability.id)) throw new Error(`duplicate capability: ${capability.id}`);
     if (typeof capability.match !== "function") throw new Error(`capability ${capability.id} requires match()`);
     if (typeof capability.run !== "function") throw new Error(`capability ${capability.id} requires run()`);
+    if (capability.materialize && typeof capability.materialize !== "function") {
+      throw new Error(`capability ${capability.id} materialize must be a function`);
+    }
+    if (capability.release && typeof capability.release !== "function") {
+      throw new Error(`capability ${capability.id} release must be a function`);
+    }
     this.capabilities.set(capability.id, Object.freeze({
       deterministic: true,
       dependencies: [],
@@ -109,9 +115,54 @@ function planRun(registry, request, state, mode) {
   return { matched, executable, materialized };
 }
 
-export async function executeIgnitionRun({ registry, request, state = {}, mode = "ignition" }) {
+async function takeResourceSnapshot(resourceProbe, phase, details = {}) {
+  if (!resourceProbe) return null;
+  const value = await resourceProbe(Object.freeze({ phase, ...details }));
+  return value == null ? null : structuredClone(value);
+}
+
+async function materializeCapability(capability, context) {
+  const started = performance.now();
+  if (!capability.materialize) {
+    return {
+      instance: null,
+      receipt: {
+        capabilityId: capability.id,
+        allocatedBytes: 0,
+        elapsedMs: performance.now() - started,
+      },
+    };
+  }
+
+  const materialized = await capability.materialize(Object.freeze(context));
+  if (!materialized || typeof materialized !== "object") {
+    throw new Error(`capability ${capability.id} materialize() must return an object`);
+  }
+  const allocatedBytes = Number(materialized.allocatedBytes ?? 0);
+  if (!Number.isSafeInteger(allocatedBytes) || allocatedBytes < 0) {
+    throw new Error(`capability ${capability.id} materialize() returned invalid allocatedBytes`);
+  }
+
+  return {
+    instance: materialized.instance ?? null,
+    receipt: {
+      capabilityId: capability.id,
+      allocatedBytes,
+      elapsedMs: performance.now() - started,
+    },
+  };
+}
+
+export async function executeIgnitionRun({
+  registry,
+  request,
+  state = {},
+  mode = "ignition",
+  resourceProbe = null,
+}) {
   if (!(registry instanceof CapabilityRegistry)) throw new Error("registry must be CapabilityRegistry");
   if (!["ignition", "eager"].includes(mode)) throw new Error("mode must be ignition or eager");
+  if (resourceProbe && typeof resourceProbe !== "function") throw new Error("resourceProbe must be a function");
 
   const runId = `run-${hashValue({ request, state, mode })}`;
   const plan = planRun(registry, request, state, mode);
@@ -119,28 +170,78 @@ export async function executeIgnitionRun({ registry, request, state = {}, mode =
   const started = performance.now();
   const outputs = {};
   const capabilityReceipts = [];
+  const materializationReceipts = [];
+  const runtimeById = new Map();
+  const resourceSnapshots = {};
+  let releaseError = null;
 
-  for (const capability of ordered) {
-    const capStarted = performance.now();
-    const dependencies = Object.fromEntries(
-      capability.dependencies
-        .filter((depId) => depId in outputs)
-        .map((depId) => [depId, outputs[depId]])
-    );
-    const output = await capability.run(Object.freeze({ request, state, dependencies }));
-    outputs[capability.id] = output;
-    capabilityReceipts.push({
-      capabilityId: capability.id,
-      dependencies: capability.dependencies,
-      outputHash: hashValue(output),
-      elapsedMs: performance.now() - capStarted,
-      resourceEstimateBytes: capability.resourceEstimateBytes,
+  resourceSnapshots.beforeMaterialize = await takeResourceSnapshot(resourceProbe, "beforeMaterialize", {
+    mode,
+    materializedCapabilityIds: plan.materialized.map((capability) => capability.id),
+  });
+
+  try {
+    for (const capability of plan.materialized) {
+      const { instance, receipt } = await materializeCapability(capability, { request, state, mode });
+      runtimeById.set(capability.id, instance);
+      materializationReceipts.push(receipt);
+    }
+
+    resourceSnapshots.afterMaterialize = await takeResourceSnapshot(resourceProbe, "afterMaterialize", {
+      mode,
+      materializedCapabilityIds: plan.materialized.map((capability) => capability.id),
+    });
+
+    for (const capability of ordered) {
+      const capStarted = performance.now();
+      const dependencies = Object.fromEntries(
+        capability.dependencies
+          .filter((depId) => depId in outputs)
+          .map((depId) => [depId, outputs[depId]])
+      );
+      const output = await capability.run(Object.freeze({
+        request,
+        state,
+        dependencies,
+        runtime: runtimeById.get(capability.id),
+      }));
+      outputs[capability.id] = output;
+      capabilityReceipts.push({
+        capabilityId: capability.id,
+        dependencies: capability.dependencies,
+        outputHash: hashValue(output),
+        elapsedMs: performance.now() - capStarted,
+        resourceEstimateBytes: capability.resourceEstimateBytes,
+      });
+    }
+  } finally {
+    for (const capability of [...plan.materialized].reverse()) {
+      try {
+        if (capability.release) {
+          await capability.release(Object.freeze({
+            request,
+            state,
+            mode,
+            runtime: runtimeById.get(capability.id),
+          }));
+        }
+      } catch (error) {
+        releaseError ??= error;
+      }
+      runtimeById.delete(capability.id);
+    }
+    resourceSnapshots.afterRelease = await takeResourceSnapshot(resourceProbe, "afterRelease", {
+      mode,
+      releasedCapabilityIds: plan.materialized.map((capability) => capability.id),
     });
   }
 
+  if (releaseError) throw releaseError;
+
   const merged = Object.fromEntries(Object.keys(outputs).sort().map((key) => [key, outputs[key]]));
+  const actualMaterializedBytes = materializationReceipts.reduce((sum, receipt) => sum + receipt.allocatedBytes, 0);
   const receipt = {
-    schema: "axm.ignition-run/v0.01",
+    schema: "axm.ignition-run/v0.02",
     runId,
     mode,
     requestHash: hashValue(request),
@@ -151,7 +252,10 @@ export async function executeIgnitionRun({ registry, request, state = {}, mode =
     materializedCount: plan.materialized.length,
     executedCount: ordered.length,
     estimatedWorkingSetBytes: plan.materialized.reduce((sum, capability) => sum + capability.resourceEstimateBytes, 0),
+    actualMaterializedBytes,
+    materializationReceipts,
     capabilityReceipts,
+    resourceSnapshots,
     resultHash: hashValue(merged),
     elapsedMs: performance.now() - started,
     releasedCapabilityIds: plan.materialized.map((capability) => capability.id),
@@ -165,7 +269,8 @@ export function compareEquivalentRuns(a, b) {
     equivalent: hashValue(a.result) === hashValue(b.result),
     leftHash: hashValue(a.result),
     rightHash: hashValue(b.result),
-    workingSetDeltaBytes: a.receipt.estimatedWorkingSetBytes - b.receipt.estimatedWorkingSetBytes,
+    estimatedWorkingSetDeltaBytes: a.receipt.estimatedWorkingSetBytes - b.receipt.estimatedWorkingSetBytes,
+    actualMaterializedDeltaBytes: a.receipt.actualMaterializedBytes - b.receipt.actualMaterializedBytes,
     materializedCountDelta: a.receipt.materializedCount - b.receipt.materializedCount,
     executedCountDelta: a.receipt.executedCount - b.receipt.executedCount,
   };
