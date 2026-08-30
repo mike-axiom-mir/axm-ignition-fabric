@@ -26,3 +26,5 @@ jobs:
         run: npm run benchmark:realistic
       - name: Run warm/direct break-even benchmark
         run: npm run benchmark:warm
+      - name: Run adaptive Governor benchmark
+        run: npm run benchmark:governor
