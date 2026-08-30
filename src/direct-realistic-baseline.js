@@ -19,8 +19,7 @@ const DIRECT_ROUTES = {
   ],
 };
 
-export async function runDirectRealisticBaseline({ request, state }) {
-  const registry = buildRealisticRegistry();
+export async function runDirectRealisticBaseline({ request, state, registry = buildRealisticRegistry() }) {
   const route = DIRECT_ROUTES[request.kind];
   if (!route) throw new Error(`unsupported direct request kind: ${request.kind}`);
 
