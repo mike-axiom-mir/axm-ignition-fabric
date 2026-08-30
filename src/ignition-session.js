@@ -121,6 +121,7 @@ export class IgnitionSession {
     const ordered = topoSort(executable);
     const target = this.mode === "eager" ? this.registry.all() : executable;
     const newlyMaterializedCapabilityIds = [];
+    const newMaterializationReceipts = [];
     let newlyMaterializedBytes = 0;
     const materializeStarted = performance.now();
 
@@ -130,6 +131,7 @@ export class IgnitionSession {
       this.cache.set(capability.id, body);
       newlyMaterializedCapabilityIds.push(capability.id);
       newlyMaterializedBytes += body.allocatedBytes;
+      newMaterializationReceipts.push({ capabilityId: capability.id, allocatedBytes: body.allocatedBytes });
     }
     const materializeMs = performance.now() - materializeStarted;
 
@@ -155,13 +157,14 @@ export class IgnitionSession {
     return {
       result,
       receipt: {
-        schema: "axm.ignition-session-run/v0.04",
+        schema: "axm.ignition-session-run/v0.05",
         mode: this.mode,
         requestHash: hashValue(request),
         stateHash: nextStateHash,
         matchedCapabilityIds: matched.map((capability) => capability.id),
         executedCapabilityIds: ordered.map((capability) => capability.id),
         newlyMaterializedCapabilityIds,
+        newMaterializationReceipts,
         newlyMaterializedBytes,
         reusedCapabilityIds: target.filter((capability) => !newlyMaterializedCapabilityIds.includes(capability.id)).map((capability) => capability.id),
         cacheCapabilityIds: this.cachedCapabilityIds,
