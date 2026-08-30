@@ -27,9 +27,12 @@ export async function runDirectRealisticBaseline({ request, state, registry = bu
   const runtimes = new Map();
   const outputs = {};
   let allocatedBytes = 0;
-  const materializeStarted = performance.now();
+  let materializeMs = 0;
+  let executeMs = 0;
+  let result = null;
 
   try {
+    const materializeStarted = performance.now();
     for (const id of route) {
       const capability = registry.get(id);
       if (!capability) throw new Error(`missing direct capability ${id}`);
@@ -43,7 +46,7 @@ export async function runDirectRealisticBaseline({ request, state, registry = bu
       allocatedBytes += bytes;
       runtimes.set(id, body?.instance ?? null);
     }
-    const materializeMs = performance.now() - materializeStarted;
+    materializeMs = performance.now() - materializeStarted;
 
     const executeStarted = performance.now();
     for (const id of route) {
@@ -60,23 +63,8 @@ export async function runDirectRealisticBaseline({ request, state, registry = bu
         runtime: runtimes.get(id) ?? null,
       }));
     }
-    const executeMs = performance.now() - executeStarted;
-    const result = Object.fromEntries(Object.keys(outputs).sort().map((id) => [id, outputs[id]]));
-
-    return {
-      result,
-      receipt: {
-        schema: "axm.direct-realistic-run/v0.04",
-        requestHash: hashValue(request),
-        stateHash: hashValue(state),
-        route,
-        actualMaterializedBytes: allocatedBytes,
-        materializeMs,
-        executeMs,
-        totalElapsedMs: performance.now() - started,
-        resultHash: hashValue(result),
-      },
-    };
+    executeMs = performance.now() - executeStarted;
+    result = Object.fromEntries(Object.keys(outputs).sort().map((id) => [id, outputs[id]]));
   } finally {
     for (const id of [...route].reverse()) {
       const capability = registry.get(id);
@@ -91,4 +79,19 @@ export async function runDirectRealisticBaseline({ request, state, registry = bu
       runtimes.delete(id);
     }
   }
+
+  return {
+    result,
+    receipt: {
+      schema: "axm.direct-realistic-run/v0.04",
+      requestHash: hashValue(request),
+      stateHash: hashValue(state),
+      route,
+      actualMaterializedBytes: allocatedBytes,
+      materializeMs,
+      executeMs,
+      totalElapsedMs: performance.now() - started,
+      resultHash: hashValue(result),
+    },
+  };
 }
