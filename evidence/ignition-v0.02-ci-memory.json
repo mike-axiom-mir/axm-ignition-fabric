@@ -1,0 +1,72 @@
+{
+  "schema": "axm.ignition-evidence/v0.02",
+  "status": "MEASURED_IN_HARNESS",
+  "testedHead": "e57d71fc1c16d900c75c9d5cf22bf153679af7d0",
+  "githubActionsRunId": 33328229492,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2"
+  },
+  "tests": {
+    "passed": 9,
+    "failed": 0,
+    "deterministicDemoScenarios": 5,
+    "memoryBenchmarkScenarios": 5
+  },
+  "measurements": [
+    {
+      "scenario": "numbers",
+      "equivalent": true,
+      "eagerMaterializedBytes": 24641536,
+      "ignitionMaterializedBytes": 3145728,
+      "measuredArrayBufferBytesSaved": 21495808,
+      "eagerRssDeltaBytes": 24895488,
+      "ignitionRssDeltaBytes": 3469312
+    },
+    {
+      "scenario": "text",
+      "equivalent": true,
+      "eagerMaterializedBytes": 24641536,
+      "ignitionMaterializedBytes": 4194304,
+      "measuredArrayBufferBytesSaved": 20447232,
+      "eagerRssDeltaBytes": 24780800,
+      "ignitionRssDeltaBytes": 4386816
+    },
+    {
+      "scenario": "lookup",
+      "equivalent": true,
+      "eagerMaterializedBytes": 24641536,
+      "ignitionMaterializedBytes": 524288,
+      "measuredArrayBufferBytesSaved": 24117248,
+      "eagerRssDeltaBytes": 24678400,
+      "ignitionRssDeltaBytes": 655360
+    },
+    {
+      "scenario": "mixed",
+      "equivalent": true,
+      "eagerMaterializedBytes": 24641536,
+      "ignitionMaterializedBytes": 7864320,
+      "measuredArrayBufferBytesSaved": 16777216,
+      "eagerRssDeltaBytes": 24977408,
+      "ignitionRssDeltaBytes": 8056832
+    },
+    {
+      "scenario": "heavy",
+      "equivalent": true,
+      "eagerMaterializedBytes": 24641536,
+      "ignitionMaterializedBytes": 16777216,
+      "measuredArrayBufferBytesSaved": 7864320,
+      "eagerRssDeltaBytes": 24776704,
+      "ignitionRssDeltaBytes": 16908288
+    }
+  ],
+  "strongestSupportedClaim": "For this deterministic harness, keeping irrelevant capability bodies dormant reduced actual runtime ArrayBuffer working-set allocation while preserving exact result hashes.",
+  "boundaries": [
+    "Does not prove created RAM.",
+    "Does not prove free compute or energy.",
+    "Does not prove lower RSS for every runtime or workload.",
+    "Does not prove lower total CPU cost after materialization and scheduling overhead.",
+    "Does not prove production-scale savings or universal superiority over eager architecture."
+  ],
+  "nextGate": "Run the same comparison on a realistic modular workload with parsed/indexed state or executable resources and measure peak memory, allocation churn, runtime overhead, reuse, and the break-even point versus eager execution."
+}
