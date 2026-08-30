@@ -32,12 +32,14 @@ test("no-retention policy never keeps a derived body", async () => {
 
 test("LRU retention obeys a hard byte ceiling and emits deterministic evictions", async () => {
   const state = buildWorkspaceState({ fileCount: 1000 });
-  const session = new BudgetedRetentionSession({ registry: buildRealisticRegistry(), maxCacheBytes: 40_000, policy: "lru" });
+  const session = new BudgetedRetentionSession({ registry: buildRealisticRegistry(), maxCacheBytes: 20_000, policy: "lru" });
   try {
-    await assertMatchesDirect(session, realisticRequests.dependencies, state);
+    const dependencies = await assertMatchesDirect(session, realisticRequests.dependencies, state);
+    assert.ok(dependencies.receipt.retained);
     const symbols = await assertMatchesDirect(session, realisticRequests.symbols, state);
-    assert.ok(session.cacheBytes <= 40_000);
+    assert.ok(session.cacheBytes <= 20_000);
     assert.ok(symbols.receipt.evicted.length >= 1);
+    assert.equal(symbols.receipt.evicted[0].capabilityId, "workspace-dependency-index");
     assert.equal(symbols.receipt.evicted[0].reason, "budget");
   } finally {
     await session.close({ state });
