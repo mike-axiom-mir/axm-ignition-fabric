@@ -1,6 +1,6 @@
 {
   "name": "axm-ignition-fabric",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,6 +19,7 @@
     "benchmark:streamed-peak": "node scripts/run-streamed-peak-benchmark.mjs",
     "benchmark:segmented-search": "node scripts/run-segmented-search-benchmark.mjs",
     "benchmark:construction-lifetime": "node scripts/run-construction-lifetime-benchmark.mjs",
-    "benchmark:residual-attribution": "node scripts/run-residual-attribution-benchmark.mjs"
+    "benchmark:residual-attribution": "node scripts/run-residual-attribution-benchmark.mjs",
+    "benchmark:streaming-fingerprint": "node scripts/run-streaming-fingerprint-benchmark.mjs"
   }
 }
