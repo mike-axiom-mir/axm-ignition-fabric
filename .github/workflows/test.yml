@@ -60,3 +60,5 @@ jobs:
         run: npm run benchmark:one-truth-advance
       - name: Run selective domain checkpoint benchmark
         run: npm run benchmark:domain-checkpoints
+      - name: Run adaptive truth checkpoint retention benchmark
+        run: npm run benchmark:adaptive-truth-checkpoints
