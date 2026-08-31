@@ -1,0 +1,92 @@
+{
+  "schema": "axm.ignition-shared-traversal-evidence/v0.18",
+  "status": "MEASURED_COUNTEREXAMPLE_CORE_REJECTED",
+  "implementationRun": {
+    "githubActionsRun": 33376476561,
+    "tests": { "passed": 98, "failed": 0 },
+    "gates": 22
+  },
+  "question": "Can adaptive fingerprint selection and hashing share one canonical traversal so the runtime avoids v0.17's separate preflight walk without worsening total resource economics?",
+  "mechanism": {
+    "thresholdCharacters": 65536,
+    "largeComposite": "Buffer canonical prefix until threshold, seed FNV from that prefix once, discard it, then continue the same traversal streaming.",
+    "smallComposite": "Finish one canonical traversal into the compact buffer, then hash that buffer.",
+    "objectTraversalRestarts": 0
+  },
+  "workspace2500": {
+    "hash": "7e77d21a",
+    "canonicalCharacters": 1284856,
+    "route": "streaming",
+    "v017": {
+      "preflightNodes": 803,
+      "selectedTraversalNodes": 15005,
+      "conceptualNodeVisits": 15808,
+      "timingMedianMs": 17.987090999999996,
+      "heapUsedPeakBytes": 10360,
+      "heapTotalPeakBytes": 4456448,
+      "rssPeakBytes": 5451776
+    },
+    "shared": {
+      "canonicalTraversalNodes": 15005,
+      "traversalPasses": 1,
+      "objectTraversalRestarts": 0,
+      "maxRetainedCanonicalPrefixCharacters": 65460,
+      "timingMedianMs": 19.759375,
+      "heapUsedPeakBytes": 76960,
+      "heapTotalPeakBytes": 4718592,
+      "rssPeakBytes": 3653632
+    },
+    "deltaV017MinusShared": {
+      "structuralNodeVisitsAvoided": 803,
+      "timingMs": -1.7722840000000026,
+      "heapUsedPeakBytes": -66600,
+      "heapTotalPeakBytes": -262144,
+      "rssPeakBytes": 1798144
+    }
+  },
+  "workspace500": {
+    "hash": "3a639627",
+    "v017TimingMedianMs": 5.809813999999999,
+    "sharedTimingMedianMs": 7.528952,
+    "v017HeapUsedPeakBytes": 14184,
+    "sharedHeapUsedPeakBytes": 80736,
+    "v017HeapTotalPeakBytes": 262144,
+    "sharedHeapTotalPeakBytes": 2359296,
+    "v017RssPeakBytes": 1179648,
+    "sharedRssPeakBytes": 1703936,
+    "interpretation": "Shared traversal is worse on timing, heapUsed, heapTotal, and RSS despite avoiding 827 preflight node visits."
+  },
+  "smallCounterexamples": {
+    "tiny": {
+      "v017TimingMedianMs": 0.2908860000000004,
+      "sharedTimingMedianMs": 0.3867779999999996,
+      "v017HeapUsedPeakBytes": 10344,
+      "sharedHeapUsedPeakBytes": 18088
+    },
+    "workspace100": {
+      "v017TimingMedianMs": 2.8394119999999994,
+      "sharedTimingMedianMs": 2.991565999999999,
+      "v017HeapUsedPeakBytes": 62424,
+      "sharedHeapUsedPeakBytes": 148264
+    }
+  },
+  "giantStringBoundary": {
+    "canonicalCharacters": 131074,
+    "preflightNodesV017": 1,
+    "sharedTraversalNodes": 1,
+    "sharedMaxRetainedCanonicalPrefixCharacters": 131074,
+    "v017TimingMedianMs": 4.2746369999999985,
+    "sharedTimingMedianMs": 3.9398390000000028,
+    "v017HeapUsedPeakBytes": 148760,
+    "sharedHeapUsedPeakBytes": 280040,
+    "interpretation": "The current canonical streamer emits one giant primitive JSON string as one chunk, so the threshold cannot bound the retained prefix for this shape."
+  },
+  "decision": {
+    "corePromotion": false,
+    "liveCore": "Restore v0.17 adaptive fingerprint policy.",
+    "preservedExperiment": true,
+    "reason": "Removing the separate preflight traversal is structurally real, but the retained canonical prefix makes the measured implementation slower and more heap-expensive on the main composite workload, with a strict loss at 500 files."
+  },
+  "strongestSupportedClaim": "A one-pass shared canonical traversal can eliminate v0.17's separate structural preflight and preserve exact fingerprints, but this implementation does not improve overall resource economics: on the 2,500-file fixture it avoids 803 structural node visits and lowers RSS by about 1.80 MB while increasing heapUsed peak by 66.6 KB and median time by about 1.77 ms; at 500 files it is worse on timing, heapUsed, heapTotal, and RSS. The experiment is therefore preserved but rejected for the live core.",
+  "nextGate": "Avoid paying either a separate preflight walk or a retained canonical prefix. Investigate producer-carried/cached structural size hints or incremental canonical-size metadata that can make route selection O(1) or mutation-maintained, while preserving v0.17 exact hash semantics."
+}
