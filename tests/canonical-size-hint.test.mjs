@@ -10,6 +10,10 @@ import {
 } from "../src/canonical-size-hint.js";
 import { buildWorkspaceState } from "../src/realistic-workload.js";
 import {
+  applyWorkspacePointMutation,
+  buildWorkspaceDomainEntryIndex,
+} from "../src/incremental-domain-index.js";
+import {
   applyTrackedWorkspacePointPatch,
   bootstrapTrackedWorkspaceTruth,
   validateTrackedWorkspaceTruth,
@@ -74,18 +78,38 @@ test("same-width import mutation keeps exact canonical size unchanged while hash
   let tracked = bootstrapTrackedWorkspaceTruth(buildWorkspaceState({ fileCount: 2500 }));
   const beforeCharacters = tracked.canonicalSizeHint.canonicalCharacters;
   const beforeHash = tracked.stateHash;
-  const file = tracked.state.files[0];
-  assert.ok(file.content.includes("file-1.js"));
+  const file = tracked.state.files[1];
+  assert.ok(file.content.includes("file-2.js"));
   tracked = applyTrackedWorkspacePointPatch({
     tracked,
-    fileId: 0,
-    patch: { content: file.content.replace("file-1.js", "file-2.js") },
+    fileId: 1,
+    patch: { content: file.content.replace("file-2.js", "file-3.js") },
     evidence: { kind: "same-width-import" },
   });
   assert.equal(tracked.lastMutation.canonicalSizeDeltaCharacters, 0);
   assert.equal(tracked.canonicalSizeHint.canonicalCharacters, beforeCharacters);
   assert.notEqual(tracked.stateHash, beforeHash);
   assert.equal(tracked.stateHash, hashValue(tracked.state));
+});
+
+test("tracked size-hint mutation receipt feeds the existing v0.10 incremental domain index", () => {
+  const state = buildWorkspaceState({ fileCount: 2500 });
+  let tracked = bootstrapTrackedWorkspaceTruth(state);
+  const index = buildWorkspaceDomainEntryIndex(state, null, { stateHash: tracked.stateHash });
+  const file = tracked.state.files[1];
+  tracked = applyTrackedWorkspacePointPatch({
+    tracked,
+    fileId: 1,
+    patch: { content: file.content.replace("file-2.js", "file-3.js") },
+    evidence: { kind: "domain-index-handoff" },
+  });
+  const advanced = applyWorkspacePointMutation({
+    index,
+    mutationReceipt: tracked.lastMutation.mutationReceipt,
+    nextState: tracked.state,
+  });
+  assert.equal(advanced.identity.stateHash, tracked.stateHash);
+  assert.deepEqual(advanced.lastAdvance.domainsRehashed, tracked.lastMutation.mutationReceipt.changedDomains);
 });
 
 test("maintained exact size can cross the route threshold without a selection scan", () => {
