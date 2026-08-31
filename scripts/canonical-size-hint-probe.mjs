@@ -25,11 +25,11 @@ const iterations = scenario === "threshold" ? 1 : 8;
 
 function makePatch(state, iteration) {
   if (scenario === "same-width") {
-    const file = state.files[0];
-    const from = iteration % 2 === 0 ? "file-1.js" : "file-2.js";
-    const to = iteration % 2 === 0 ? "file-2.js" : "file-1.js";
+    const file = state.files[1];
+    const from = iteration % 2 === 0 ? "file-2.js" : "file-3.js";
+    const to = iteration % 2 === 0 ? "file-3.js" : "file-2.js";
     if (!file.content.includes(from)) throw new Error(`same-width fixture missing ${from}`);
-    return { fileId: 0, patch: { content: file.content.replace(from, to) } };
+    return { fileId: 1, patch: { content: file.content.replace(from, to) } };
   }
   if (scenario === "threshold") {
     const file = state.files[0];
