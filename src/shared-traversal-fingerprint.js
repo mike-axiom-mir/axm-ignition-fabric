@@ -13,11 +13,22 @@ function validateThreshold(thresholdCharacters) {
   }
 }
 
+function observe(phaseProbe, phase, details) {
+  if (!phaseProbe) return;
+  phaseProbe(Object.freeze({ phase, ...details }));
+}
+
 export function hashValueSharedTraversalWithDecision(
   value,
-  { thresholdCharacters = DEFAULT_SHARED_TRAVERSAL_THRESHOLD } = {},
+  {
+    thresholdCharacters = DEFAULT_SHARED_TRAVERSAL_THRESHOLD,
+    phaseProbe = null,
+  } = {},
 ) {
   validateThreshold(thresholdCharacters);
+  if (phaseProbe !== null && typeof phaseProbe !== "function") {
+    throw new Error("phaseProbe must be a function or null");
+  }
 
   let bufferedPrefix = "";
   let accumulator = null;
@@ -47,13 +58,37 @@ export function hashValueSharedTraversalWithDecision(
       switchChunkCharacters = text.length;
       accumulator = new Fnv1a32Accumulator();
       if (bufferedPrefix.length > 0) accumulator.update(bufferedPrefix);
+      observe(phaseProbe, "threshold-crossed-prefix-live", {
+        canonicalCharacterCount,
+        bufferedPrefixCharacters: bufferedPrefix.length,
+        switchChunkCharacters: text.length,
+      });
       bufferedPrefix = "";
       accumulator.update(text);
+      observe(phaseProbe, "threshold-crossed-prefix-released", {
+        canonicalCharacterCount,
+        bufferedPrefixCharacters: 0,
+        switchChunkCharacters: text.length,
+      });
       return;
     }
 
     bufferedPrefix += text;
   });
+
+  if (!accumulator) {
+    observe(phaseProbe, "small-canonical-buffer-complete", {
+      canonicalCharacterCount,
+      bufferedPrefixCharacters: bufferedPrefix.length,
+      switchChunkCharacters: null,
+    });
+  } else {
+    observe(phaseProbe, "streaming-traversal-complete", {
+      canonicalCharacterCount,
+      bufferedPrefixCharacters: 0,
+      switchChunkCharacters,
+    });
+  }
 
   const hash = accumulator ? accumulator.digest() : fnv1a32(bufferedPrefix);
   const fnvMetrics = accumulator
@@ -63,6 +98,12 @@ export function hashValueSharedTraversalWithDecision(
         chunkCount: 1,
         maxChunkCharacters: bufferedPrefix.length,
       });
+
+  observe(phaseProbe, "hash-complete", {
+    canonicalCharacterCount,
+    bufferedPrefixCharacters: accumulator ? 0 : bufferedPrefix.length,
+    switchChunkCharacters,
+  });
 
   return Object.freeze({
     hash,
