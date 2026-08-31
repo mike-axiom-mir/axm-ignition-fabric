@@ -30,10 +30,19 @@ function memorySnapshot() {
   };
 }
 
-function peakDelta(snapshots, field) {
-  const baseline = snapshots[0][field];
-  const peak = Math.max(...snapshots.map((snapshot) => snapshot[field]));
-  return Math.max(0, peak - baseline);
+function peakObservation(entries, field) {
+  const baseline = entries[0].snapshot[field];
+  let best = entries[0];
+  for (const entry of entries) {
+    if (entry.snapshot[field] > best.snapshot[field]) best = entry;
+  }
+  return {
+    phase: best.phase,
+    capabilityId: best.capabilityId,
+    liveBodyBytes: best.liveBodyBytes,
+    absoluteBytes: best.snapshot[field],
+    deltaBytes: Math.max(0, best.snapshot[field] - baseline),
+  };
 }
 
 try {
@@ -64,12 +73,17 @@ try {
   };
 
   if (mode === "memory") {
-    const snapshots = run.receipt.resourceSnapshots.map((entry) => entry.snapshot);
-    out.measuredPeakArrayBufferDeltaBytes = peakDelta(snapshots, "arrayBuffers");
-    out.measuredPeakExternalDeltaBytes = peakDelta(snapshots, "external");
-    out.measuredPeakRssDeltaBytes = peakDelta(snapshots, "rss");
-    out.measuredPeakHeapUsedDeltaBytes = peakDelta(snapshots, "heapUsed");
-    out.measurementBoundary = "Fresh --expose-gc Node process. Forced-GC checkpoints are used only in memory mode. ArrayBuffer delta is the primary typed-array backing-store observation; heap/external/RSS remain secondary process metrics.";
+    const entries = run.receipt.resourceSnapshots;
+    const arrayBufferPeak = peakObservation(entries, "arrayBuffers");
+    const externalPeak = peakObservation(entries, "external");
+    const rssPeak = peakObservation(entries, "rss");
+    const heapPeak = peakObservation(entries, "heapUsed");
+    out.measuredPeakArrayBufferDeltaBytes = arrayBufferPeak.deltaBytes;
+    out.measuredPeakExternalDeltaBytes = externalPeak.deltaBytes;
+    out.measuredPeakRssDeltaBytes = rssPeak.deltaBytes;
+    out.measuredPeakHeapUsedDeltaBytes = heapPeak.deltaBytes;
+    out.peakObservations = { arrayBuffers: arrayBufferPeak, external: externalPeak, rss: rssPeak, heapUsed: heapPeak };
+    out.measurementBoundary = "Fresh --expose-gc Node process. Forced-GC checkpoints are used only in memory mode. ArrayBuffer delta is the primary backing-store observation. Peak phase attribution is recorded so hidden construction/allocator peaks are not confused with declared reachable runtime-body bytes.";
   } else {
     out.timingBoundary = "Fresh Node process without forced-GC instrumentation. Timer wraps one complete zero-retention streamed report run; fixture and state-fingerprint construction are excluded.";
   }
