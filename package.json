@@ -1,6 +1,6 @@
 {
   "name": "axm-ignition-fabric",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,6 +23,7 @@
     "benchmark:streaming-fingerprint": "node scripts/run-streaming-fingerprint-benchmark.mjs",
     "benchmark:adaptive-fingerprint": "node scripts/run-adaptive-fingerprint-benchmark.mjs",
     "benchmark:shared-traversal-fingerprint": "node scripts/run-shared-traversal-fingerprint-benchmark.mjs",
-    "benchmark:canonical-size-hint": "node scripts/run-canonical-size-hint-benchmark.mjs"
+    "benchmark:canonical-size-hint": "node scripts/run-canonical-size-hint-benchmark.mjs",
+    "benchmark:one-truth-advance": "node scripts/run-one-truth-advance-benchmark.mjs"
   }
 }
