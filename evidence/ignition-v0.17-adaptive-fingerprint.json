@@ -1,0 +1,117 @@
+{
+  "schema": "axm.ignition-adaptive-fingerprint-evidence/v0.17",
+  "status": "MEASURED_IN_HARNESS",
+  "measuredHead": "a97e37282c7d611df2bf7bc96fa153c29e80cf80",
+  "workflowRun": 33374478332,
+  "jobId": 99432747049,
+  "verification": {
+    "testsPassed": 91,
+    "testsFailed": 0,
+    "allHistoricalBenchmarkGatesPassed": true,
+    "adaptiveFingerprintGatePassed": true
+  },
+  "policy": {
+    "thresholdCharacters": 65536,
+    "selectionInput": "capped structural lower bound",
+    "selectionRule": "monolithic when lower bound does not exceed threshold; streaming once the lower bound proves the canonical representation exceeds the threshold",
+    "fullSerializationUsedToChoose": false,
+    "meaning": "deterministic memory high-water guard, not a universal CPU-optimal crossover"
+  },
+  "historicalEvidenceIntegrity": {
+    "v0_15": "residual-attribution fingerprint stage is explicitly pinned to hashValueMonolithic after adaptive core integration",
+    "v0_16": "streaming-fingerprint monolithic reference/timing path is explicitly pinned to hashValueMonolithic after adaptive core integration",
+    "reason": "older experiments must not silently change semantics when the production hashValue implementation evolves"
+  },
+  "scenarios": [
+    {
+      "name": "tiny",
+      "canonicalCharacters": 55,
+      "hash": "f3a0dd96",
+      "adaptiveRoute": "monolithic",
+      "estimate": {"lowerBoundCharacters": 55, "nodesVisited": 9, "stringsVisited": 7, "complete": true},
+      "monolithic": {"heapUsedPeakBytes": 1632, "heapTotalPeakBytes": 0, "rssPeakBytes": 131072, "timingMedianMs": 0.12218899999999877},
+      "streaming": {"heapUsedPeakBytes": 4624, "heapTotalPeakBytes": 0, "rssPeakBytes": 0, "timingMedianMs": 0.24472900000000308},
+      "adaptive": {"heapUsedPeakBytes": 7192, "heapTotalPeakBytes": 0, "rssPeakBytes": 131072, "timingMedianMs": 0.3352189999999986},
+      "adaptiveVsMonolithic": {"heapUsedSavedBytes": -5560, "heapTotalSavedBytes": 0, "rssSavedBytes": 0, "timingDeltaMs": 0.21302999999999983}
+    },
+    {
+      "name": "workspace-25",
+      "fileCount": 25,
+      "canonicalCharacters": 11954,
+      "hash": "ea144bb8",
+      "adaptiveRoute": "monolithic",
+      "estimate": {"lowerBoundCharacters": 11559, "nodesVisited": 155, "stringsVisited": 205, "complete": true},
+      "monolithic": {"heapUsedPeakBytes": 16848, "heapTotalPeakBytes": 262144, "rssPeakBytes": 3436544, "timingMedianMs": 1.1600269999999995},
+      "adaptive": {"heapUsedPeakBytes": 28800, "heapTotalPeakBytes": 262144, "rssPeakBytes": 3436544, "timingMedianMs": 1.5319040000000008},
+      "adaptiveVsMonolithic": {"heapUsedSavedBytes": -11952, "heapTotalSavedBytes": 0, "rssSavedBytes": 0, "timingDeltaMs": 0.37187700000000135}
+    },
+    {
+      "name": "workspace-100",
+      "fileCount": 100,
+      "canonicalCharacters": 48989,
+      "hash": "325ba4c3",
+      "adaptiveRoute": "monolithic",
+      "estimate": {"lowerBoundCharacters": 47344, "nodesVisited": 605, "stringsVisited": 805, "complete": true},
+      "monolithic": {"heapUsedPeakBytes": 48648, "heapTotalPeakBytes": 524288, "rssPeakBytes": 6553600, "timingMedianMs": 3.3121149999999986},
+      "adaptive": {"heapUsedPeakBytes": 60664, "heapTotalPeakBytes": 524288, "rssPeakBytes": 6451200, "timingMedianMs": 3.7399389999999997},
+      "adaptiveVsMonolithic": {"heapUsedSavedBytes": -12016, "heapTotalSavedBytes": 0, "rssSavedBytes": 102400, "timingDeltaMs": 0.4278240000000011}
+    },
+    {
+      "name": "workspace-250",
+      "fileCount": 250,
+      "canonicalCharacters": 124636,
+      "hash": "64674431",
+      "adaptiveRoute": "streaming",
+      "estimate": {"lowerBoundCharacters": 65901, "nodesVisited": 833, "stringsVisited": 1109, "complete": false},
+      "monolithic": {"heapUsedPeakBytes": 112712, "heapTotalPeakBytes": 524288, "rssPeakBytes": 6553600, "timingMedianMs": 3.9957290000000008},
+      "streaming": {"heapUsedPeakBytes": 0, "heapTotalPeakBytes": 262144, "rssPeakBytes": 6684672, "timingMedianMs": 4.781272999999999},
+      "adaptive": {"heapUsedPeakBytes": 11704, "heapTotalPeakBytes": 0, "rssPeakBytes": 7340032, "timingMedianMs": 5.982106999999999},
+      "adaptiveVsMonolithic": {"heapUsedSavedBytes": 101008, "heapTotalSavedBytes": 524288, "rssSavedBytes": -786432, "timingDeltaMs": 1.9863779999999984},
+      "adaptiveVsSelectedFixed": {"timingDeltaMs": 1.2008340000000004, "heapUsedExtraBytes": 11704}
+    },
+    {
+      "name": "workspace-500",
+      "fileCount": 500,
+      "canonicalCharacters": 251133,
+      "hash": "3a639627",
+      "adaptiveRoute": "streaming",
+      "estimate": {"lowerBoundCharacters": 65662, "nodesVisited": 827, "stringsVisited": 1101, "complete": false},
+      "monolithic": {"heapUsedPeakBytes": 221928, "heapTotalPeakBytes": 2617344, "rssPeakBytes": 6893568, "timingMedianMs": 5.975975000000002},
+      "streaming": {"heapUsedPeakBytes": 0, "heapTotalPeakBytes": 0, "rssPeakBytes": 6815744, "timingMedianMs": 6.486594000000004},
+      "adaptive": {"heapUsedPeakBytes": 12424, "heapTotalPeakBytes": 0, "rssPeakBytes": 7106560, "timingMedianMs": 6.987704000000004},
+      "adaptiveVsMonolithic": {"heapUsedSavedBytes": 209504, "heapTotalSavedBytes": 2617344, "rssSavedBytes": -212992, "timingDeltaMs": 1.0117290000000025},
+      "adaptiveVsSelectedFixed": {"timingDeltaMs": 0.5011100000000006, "heapUsedExtraBytes": 12424}
+    },
+    {
+      "name": "workspace-2500",
+      "fileCount": 2500,
+      "canonicalCharacters": 1284856,
+      "hash": "7e77d21a",
+      "adaptiveRoute": "streaming",
+      "estimate": {"lowerBoundCharacters": 65673, "nodesVisited": 803, "stringsVisited": 1069, "complete": false},
+      "monolithic": {"heapUsedPeakBytes": 1112888, "heapTotalPeakBytes": 6008832, "rssPeakBytes": 12926976, "timingMedianMs": 21.222399000000003},
+      "streaming": {"heapUsedPeakBytes": 0, "heapTotalPeakBytes": 4194304, "rssPeakBytes": 9302016, "timingMedianMs": 21.951437},
+      "adaptive": {"heapUsedPeakBytes": 12424, "heapTotalPeakBytes": 4194304, "rssPeakBytes": 10629120, "timingMedianMs": 23.646458},
+      "adaptiveVsMonolithic": {"heapUsedSavedBytes": 1100464, "heapTotalSavedBytes": 1814528, "rssSavedBytes": 2297856, "timingDeltaMs": 2.424058999999996},
+      "adaptiveVsSelectedFixed": {"timingDeltaMs": 1.6950210000000006, "heapUsedExtraBytes": 12424}
+    }
+  ],
+  "observedPolicyBoundary": {
+    "lastMeasuredMonolithicFileCount": 100,
+    "lastMeasuredMonolithicCanonicalCharacters": 48989,
+    "firstMeasuredStreamingFileCount": 250,
+    "firstMeasuredStreamingCanonicalCharacters": 124636,
+    "firstMeasuredStreamingLowerBoundCharacters": 65901
+  },
+  "strongestSupportedClaim": "In this deterministic Node harness, integrating a 65,536-character capped structural lower-bound policy into core hashValue preserved exact monolithic fingerprints across all 91 tests and historical gates, kept measured values through 48,989 canonical characters on the monolithic path, and selected streaming by the 124,636-character workspace. At 2,500 files it reduced measured fingerprint heapUsed peak by 1,100,464 B and RSS peak by 2,297,856 B versus monolithic at a 2.424059 ms median timing cost. Tiny and small inputs showed that adaptive preflight itself adds heap and CPU, so the policy is a memory high-water guard rather than a universal performance optimum.",
+  "truthBoundary": [
+    "The 65,536-character threshold is experimental and is not proven globally optimal.",
+    "Adaptive selection adds a separate capped preflight traversal before the chosen hash path.",
+    "Small values can use more heap and CPU under adaptive policy than direct monolithic hashing.",
+    "At 250 and 500 files adaptive reduced heap high-water but observed RSS was worse than monolithic in these hosted samples.",
+    "RSS, heapTotal, and heapUsed are overlapping runtime envelopes and are not additive object-size buckets.",
+    "Five hosted samples per mode/size are observations, not a broad statistical performance distribution.",
+    "No datacenter, fleet, cloud-cost, energy, CPU, or density savings claim is established."
+  ],
+  "nextGate": "Share the adaptive decision and hashing traversal so large values do not pay a separate preflight pass before streaming. Research question: can the memory guard avoid scanning to decide how to scan while preserving exact canonical hashes and the small-input fast path?"
+}
