@@ -31,8 +31,11 @@ export class Fnv1a32Accumulator {
   }
 }
 
-function streamStableValue(value, emit) {
+function streamStableValue(value, emit, traversal) {
+  traversal.nodesVisited += 1;
+
   if (value === null || typeof value !== "object") {
+    if (typeof value === "string") traversal.stringsVisited += 1;
     const serialized = JSON.stringify(value);
     if (serialized === undefined) return false;
     emit(serialized);
@@ -40,40 +43,64 @@ function streamStableValue(value, emit) {
   }
 
   if (Array.isArray(value)) {
+    traversal.arraysVisited += 1;
     emit("[");
     for (let i = 0; i < value.length; i += 1) {
       if (i > 0) emit(",");
-      if (i in value) streamStableValue(value[i], emit);
+      if (i in value) streamStableValue(value[i], emit, traversal);
     }
     emit("]");
     return true;
   }
 
+  traversal.objectsVisited += 1;
   emit("{");
   const keys = Object.keys(value).sort();
+  traversal.objectKeysVisited += keys.length;
   for (let i = 0; i < keys.length; i += 1) {
     if (i > 0) emit(",");
     const key = keys[i];
+    traversal.stringsVisited += 1;
     emit(JSON.stringify(key));
     emit(":");
-    if (!streamStableValue(value[key], emit)) emit("undefined");
+    if (!streamStableValue(value[key], emit, traversal)) emit("undefined");
   }
   emit("}");
   return true;
 }
 
-export function forEachStableStringChunk(value, emit) {
+function createTraversalMetrics() {
+  return {
+    traversalPasses: 1,
+    nodesVisited: 0,
+    arraysVisited: 0,
+    objectsVisited: 0,
+    objectKeysVisited: 0,
+    stringsVisited: 0,
+  };
+}
+
+export function forEachStableStringChunkWithMetrics(value, emit) {
   if (typeof emit !== "function") throw new Error("emit must be a function");
-  const emitted = streamStableValue(value, emit);
+  const traversal = createTraversalMetrics();
+  const emitted = streamStableValue(value, emit, traversal);
   if (!emitted) throw new TypeError("top-level value has no stable string representation");
+  return Object.freeze({ ...traversal });
+}
+
+export function forEachStableStringChunk(value, emit) {
+  forEachStableStringChunkWithMetrics(value, emit);
 }
 
 export function hashValueStreamingWithMetrics(value) {
   const accumulator = new Fnv1a32Accumulator();
-  forEachStableStringChunk(value, (chunk) => accumulator.update(chunk));
+  const traversal = forEachStableStringChunkWithMetrics(value, (chunk) => accumulator.update(chunk));
   return {
     hash: accumulator.digest(),
-    metrics: accumulator.metrics(),
+    metrics: Object.freeze({
+      ...accumulator.metrics(),
+      ...traversal,
+    }),
   };
 }
 
