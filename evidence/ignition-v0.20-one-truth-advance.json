@@ -1,0 +1,138 @@
+{
+  "schema": "axm.ignition-one-truth-advance-evidence/v0.20",
+  "sourceCodeHead": "053cfbe3fb93d893a4af66fe4fd00d0e300c3204",
+  "sourceRun": 33382269264,
+  "sourceJob": 99457086223,
+  "sourceRunConclusion": "success",
+  "testCount": 114,
+  "testPassCount": 114,
+  "ciEvidenceGateCount": 24,
+  "ciEvidenceGatePassCount": 24,
+  "fileCount": 2500,
+  "checkpointBodyBytes": 10000,
+  "checkpointShape": "one Uint32 FNV state per file boundary",
+  "externalStateHashCompatibility": "legacy canonical FNV hash preserved exactly",
+  "universalHashFallback": "ordinary untracked hashValue(value) remains the sealed v0.17 adaptive policy",
+  "question": "Can one trusted point mutation advance exact canonical-size metadata, the existing canonical FNV state fingerprint, the mutation receipt, and the existing versioned domain identity from the same event while preserving full recomputation as an oracle/fallback?",
+  "mechanism": {
+    "bootstrap": "Store the legacy-compatible FNV state immediately before each canonical file body.",
+    "pointMutation": "Reuse the unchanged prefix checkpoint, hash the changed file and canonical suffix, refresh downstream checkpoints, then advance canonical-size metadata and the existing v0.10 domain identity from the same mutation event.",
+    "truthConsequencesAdvanced": [
+      "canonical-size",
+      "state-fingerprint",
+      "domain-identity"
+    ],
+    "structuralFallback": "File-count/top-level-envelope changes are rejected by the checkpoint point-mutation path rather than guessed compatible."
+  },
+  "results": {
+    "first": {
+      "fileIndex": 0,
+      "hash": "a9e9a243",
+      "canonicalCharacters": 1284860,
+      "changedDomains": ["metadata"],
+      "v019": {
+        "fingerprintCharactersRehashed": 1284860,
+        "fingerprintFilesRehashed": 2500,
+        "fingerprintFilesSkipped": 0,
+        "wallMsMedian": 23.007832
+      },
+      "v020": {
+        "fingerprintCharactersRehashed": 1284833,
+        "fingerprintFilesRehashed": 2500,
+        "fingerprintFilesSkipped": 0,
+        "checkpointBytes": 10000,
+        "wallMsMedian": 21.348444
+      },
+      "observedDelta": {
+        "fingerprintCharactersSaved": 27,
+        "fingerprintCharacterFractionSaved": 0.00002101396261071245,
+        "wallMsSavedMedian": 1.659388
+      },
+      "interpretation": "Near-no-benefit structural counterexample: exact legacy FNV compatibility leaves almost the entire suffix after a first-file mutation."
+    },
+    "middle": {
+      "fileIndex": 1250,
+      "hash": "7316a22f",
+      "canonicalCharacters": 1284860,
+      "changedDomains": ["metadata"],
+      "v019": {
+        "fingerprintCharactersRehashed": 1284860,
+        "fingerprintFilesRehashed": 2500,
+        "fingerprintFilesSkipped": 0,
+        "wallMsMedian": 25.307887
+      },
+      "v020": {
+        "fingerprintCharactersRehashed": 650693,
+        "fingerprintFilesRehashed": 1250,
+        "fingerprintFilesSkipped": 1250,
+        "checkpointBytes": 10000,
+        "wallMsMedian": 14.549258
+      },
+      "observedDelta": {
+        "fingerprintCharactersSaved": 634167,
+        "fingerprintCharacterFractionSaved": 0.49356894914621047,
+        "wallMsSavedMedian": 10.758629
+      }
+    },
+    "last": {
+      "fileIndex": 2499,
+      "hash": "76accc6d",
+      "canonicalCharacters": 1284860,
+      "changedDomains": ["metadata"],
+      "v019": {
+        "fingerprintCharactersRehashed": 1284860,
+        "fingerprintFilesRehashed": 2500,
+        "fingerprintFilesSkipped": 0,
+        "wallMsMedian": 25.078754
+      },
+      "v020": {
+        "fingerprintCharactersRehashed": 575,
+        "fingerprintFilesRehashed": 1,
+        "fingerprintFilesSkipped": 2499,
+        "checkpointBytes": 10000,
+        "wallMsMedian": 4.407379
+      },
+      "observedDelta": {
+        "fingerprintCharactersSaved": 1284285,
+        "fingerprintCharacterFractionSaved": 0.999552480425883,
+        "wallMsSavedMedian": 20.671375
+      }
+    },
+    "sameWidthLast": {
+      "fileIndex": 2498,
+      "hash": "01d9ed74",
+      "canonicalCharacters": 1284856,
+      "changedDomains": ["content-hash", "imports"],
+      "v019": {
+        "fingerprintCharactersRehashed": 1284856,
+        "fingerprintFilesRehashed": 2500,
+        "fingerprintFilesSkipped": 0,
+        "wallMsMedian": 25.182261
+      },
+      "v020": {
+        "fingerprintCharactersRehashed": 1084,
+        "fingerprintFilesRehashed": 2,
+        "fingerprintFilesSkipped": 2498,
+        "checkpointBytes": 10000,
+        "wallMsMedian": 5.350479
+      },
+      "observedDelta": {
+        "fingerprintCharactersSaved": 1283772,
+        "fingerprintCharacterFractionSaved": 0.9991563256894158,
+        "wallMsSavedMedian": 19.831782
+      },
+      "interpretation": "Canonical representation size stays exactly unchanged while state hash and the imports/content-hash domain identities advance."
+    }
+  },
+  "proofBoundary": {
+    "exactness": "v0.19 and v0.20 end at the same legacy-compatible FNV state hash, exact canonical size, changed-domain receipt, and versioned domain identity in every measured scenario.",
+    "oneEvent": "v0.20 uses one trusted point-mutation event to advance canonical-size metadata, exact state fingerprint checkpoints, the mutation receipt, and the existing v0.10 domain identity.",
+    "checkpointCost": "The 2,500-file checkpoint body is a persistent 10,000-byte Uint32Array.",
+    "positionBoundary": "The implemented exact legacy-FNV checkpoint path reuses the unchanged prefix but still rehashes the changed file and canonical suffix. It is position-sensitive and is not claimed O(1).",
+    "timing": "Five fresh processes per method/scenario. Bootstrap/checkpoint construction and independent full-reference verification are excluded. Hosted timing medians are observations, not universal performance claims.",
+    "compatibility": "No new Merkle/state-hash identity is introduced. The external state hash remains byte-for-byte compatible with the existing canonical FNV fingerprint.",
+    "scope": "This is a deterministic 2,500-file workspace harness. It is not a datacenter, fleet, energy, or universal software claim."
+  },
+  "strongestSupportedClaim": "In this deterministic 2,500-file tracked-workspace harness, one trusted point mutation can advance exact canonical-size metadata, the existing legacy-compatible canonical FNV state hash, its mutation receipt, and the existing versioned domain identity from one event. A 10,000-byte file-boundary FNV checkpoint body enables exact unchanged-prefix reuse: a middle-file path mutation reduced canonical fingerprint rehashing from 1,284,860 to 650,693 characters and median measured transition time from 25.31 ms to 14.55 ms; a last-file path mutation reduced rehashing to 575 characters with the exact same state/domain truth and measured 4.41 ms versus 25.08 ms. A first-file mutation preserved the near-no-benefit counterexample, saving only 27 canonical characters. Timing is hosted evidence, not universal performance.",
+  "nextGate": "v0.21 checkpointed domain truth advance: test whether changed domain-entry hashes can reuse exact prefix checkpoints too, while accounting for the persistent checkpoint tax and retaining first-file/two-domain counterexamples."
+}
