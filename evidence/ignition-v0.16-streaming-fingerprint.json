@@ -1,0 +1,89 @@
+{
+  "schema": "axm.ignition-streaming-fingerprint-evidence/v0.16",
+  "measuredHead": "c816cfd908d5c7157971aad50b4ae7e569d301a4",
+  "workflowRun": 33372842460,
+  "jobId": 99427615464,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "samplesPerMode": 5,
+    "memoryModeForcedGc": true,
+    "timingModeForcedGc": false
+  },
+  "verification": {
+    "testsPassed": 85,
+    "testsFailed": 0,
+    "allHistoricalBenchmarkGatesPassed": true,
+    "streamingFingerprintGatePassed": true
+  },
+  "workspace": {
+    "fileCount": 2500,
+    "canonicalHash": "7e77d21a",
+    "canonicalCharacters": 1284856,
+    "monolithic": {
+      "chunkCount": 1,
+      "maxChunkCharacters": 1284856,
+      "memoryPeakDeltaBytes": {
+        "rss": 4349952,
+        "heapTotal": 8892416,
+        "heapUsed": 1299528,
+        "external": 4,
+        "arrayBuffers": 0
+      },
+      "timingMedianMs": 18.799445000000006
+    },
+    "streaming": {
+      "chunkCount": 55017,
+      "maxChunkCharacters": 466,
+      "memoryPeakDeltaBytes": {
+        "rss": 655360,
+        "heapTotal": 0,
+        "heapUsed": 23360,
+        "external": 4,
+        "arrayBuffers": 0
+      },
+      "timingMedianMs": 22.497917000000008
+    },
+    "observedDelta": {
+      "heapUsedPeakSavedBytes": 1276168,
+      "heapTotalPeakSavedBytes": 8892416,
+      "rssPeakSavedBytes": 3694592,
+      "streamingTimingPenaltyMs": 3.6984720000000024
+    }
+  },
+  "tinyCounterexample": {
+    "canonicalHash": "f3a0dd96",
+    "canonicalCharacters": 55,
+    "monolithic": {
+      "maxChunkCharacters": 55,
+      "heapUsedPeakDeltaBytes": 0,
+      "rssPeakDeltaBytes": 131072,
+      "timingMedianMs": 0.026659999999999684
+    },
+    "streaming": {
+      "chunkCount": 27,
+      "maxChunkCharacters": 8,
+      "heapUsedPeakDeltaBytes": 4448,
+      "rssPeakDeltaBytes": 0,
+      "timingMedianMs": 0.21656600000000026
+    },
+    "interpretation": "For a tiny object, the full serialization is already trivial. Streaming adds orchestration overhead, is much slower in this hosted sample, and does not provide a meaningful heap high-water advantage."
+  },
+  "exactness": {
+    "reference": "fnv1a32(stableStringify(value))",
+    "streaming": "deterministic canonical character emission -> incremental FNV-1a",
+    "sameCanonicalCharacterCount": true,
+    "sameHash": true,
+    "sortedObjectKeySemanticsPreserved": true,
+    "representativeUnicodeEscapingAndSparseArrayCasesTested": true,
+    "unsupportedTopLevelValuesReject": true
+  },
+  "truthBoundary": [
+    "This does not prove streaming fingerprinting is universally faster; it is slower in both measured scenarios.",
+    "RSS and V8 heap-capacity observations are process-shape specific and are not additive object-size accounting.",
+    "The streaming implementation is measured separately and has not yet replaced hashValue globally in this rung.",
+    "The tests preserve current serializer semantics; they are not an exhaustive ECMAScript/JSON conformance proof for arbitrary exotic values.",
+    "No datacenter, energy, cloud-cost, or fleet-density savings claim is established."
+  ],
+  "nextGate": "Integrate streaming fingerprinting into the core hash path behind a deterministic threshold/policy so large canonical values can avoid whole-string high-water while tiny values can keep the cheaper monolithic path; replay the complete evidence ladder and measure the crossover."
+}
