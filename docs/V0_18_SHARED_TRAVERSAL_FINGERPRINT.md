@@ -38,6 +38,31 @@ Measured implementation head: `cc37996e3dc4289ff48d8fef2b329313535e675b`.
 
 All compared paths preserve the exact 2,500-file workspace fingerprint `7e77d21a`.
 
+## Seal failure preserved
+
+After rejecting the v0.18 candidate and restoring live `hashValue()` to v0.17, exact-head seal run `33377512816` failed at the historical v0.13 segmented-search benchmark.
+
+The failure was:
+
+```text
+segmentBits=0 ArrayBuffer peak does not reproduce declared atomic-body baseline
+```
+
+The deterministic v0.13 body truth had not changed. `segmentBits=0` still declared the exact atomic search body, but the fresh Node process reported extra ArrayBuffer high-water. The same run's earlier v0.12 physical probe had already observed measured ArrayBuffer above declared live-body bytes, showing backing-store / allocator residue rather than a semantic segmentation regression.
+
+The old v0.13 CI assertion had accidentally promoted an observational physical-memory equality into a deterministic invariant. That repeats the allocator-retention mistake already exposed in v0.02.
+
+The repaired historical gate now keeps these as hard requirements:
+
+- exact report hash across all segmentation levels
+- `segmentBits=0` declared peak equals the atomic search-body size
+- at least one segmented configuration reduces the declared live-body peak
+- at least one segmented configuration reduces the request-specific search body
+
+ArrayBuffer, RSS, heap and external peaks remain measured and reported, including any gap from declared reachable-body bytes, but exact physical equality is no longer required for CI success.
+
+The failed seal is retained in `evidence/ignition-v0.18-shared-traversal.json` rather than erased.
+
 ## 2,500-file result
 
 | measure | v0.17 adaptive | v0.18 shared | shared effect |
