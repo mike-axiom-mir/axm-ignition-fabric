@@ -39,6 +39,12 @@ function stats(rows, selector) {
   return { median: median(values), min: Math.min(...values), max: Math.max(...values) };
 }
 
+function oneStableValue(rows, selector, label) {
+  const values = [...new Set(rows.map(selector))];
+  if (values.length !== 1) throw new Error(`${label} is unstable: ${values.join(",")}`);
+  return values[0];
+}
+
 const results = {};
 for (const scenario of scenarios) {
   results[scenario] = {};
@@ -48,19 +54,27 @@ for (const scenario of scenarios) {
     for (let i = 0; i < samples; i += 1) timingRows.push(await runProbe(method, scenario, "timing"));
     for (let i = 0; i < samples; i += 1) memoryRows.push(await runProbe(method, scenario, "memory"));
 
-    const hashes = [...new Set([...timingRows, ...memoryRows].map((row) => row.finalHash))];
-    const chars = [...new Set([...timingRows, ...memoryRows].map((row) => row.finalCanonicalCharacters))];
-    if (hashes.length !== 1) throw new Error(`${scenario}/${method} produced unstable hashes`);
-    if (chars.length !== 1) throw new Error(`${scenario}/${method} produced unstable canonical character counts`);
-    if (method === "hinted" && [...timingRows, ...memoryRows].some((row) => row.maintainedCanonicalCharacters !== row.finalCanonicalCharacters)) {
-      throw new Error(`${scenario} hinted canonical size drifted from exact reference`);
+    const timingHash = oneStableValue(timingRows, (row) => row.finalHash, `${scenario}/${method} timing hash`);
+    const memoryHash = oneStableValue(memoryRows, (row) => row.finalHash, `${scenario}/${method} memory hash`);
+    const timingCanonicalCharacters = oneStableValue(timingRows, (row) => row.finalCanonicalCharacters, `${scenario}/${method} timing canonical characters`);
+    const memoryCanonicalCharacters = oneStableValue(memoryRows, (row) => row.finalCanonicalCharacters, `${scenario}/${method} memory canonical characters`);
+
+    if (method === "hinted" && timingRows.some((row) => row.maintainedCanonicalCharacters !== row.finalCanonicalCharacters)) {
+      throw new Error(`${scenario} hinted timing canonical size drifted from exact reference`);
+    }
+    if (method === "hinted" && memoryRows.some((row) => row.maintainedCanonicalCharacters !== row.finalCanonicalCharacters)) {
+      throw new Error(`${scenario} hinted memory canonical size drifted from exact reference`);
     }
 
     results[scenario][method] = {
-      hash: hashes[0],
-      canonicalCharacters: chars[0],
+      timingHash,
+      memoryHash,
+      timingCanonicalCharacters,
+      memoryCanonicalCharacters,
       routes: [...new Set(timingRows.flatMap((row) => row.routes || [row.route]))],
+      memoryRoutes: [...new Set(memoryRows.map((row) => row.route))],
       iterations: timingRows[0].iterations,
+      memoryIterations: memoryRows[0].iterations,
       timingWallMs: stats(timingRows, (row) => row.wallMs),
       totalPreflightNodes: stats(timingRows, (row) => row.totalPreflightNodes),
       totalSizeHintFileInspections: stats(timingRows, (row) => row.totalSizeHintFileInspections),
@@ -78,12 +92,17 @@ for (const scenario of scenarios) {
 
   const baseline = results[scenario].v017;
   const hinted = results[scenario].hinted;
-  if (baseline.hash !== hinted.hash) throw new Error(`${scenario} hinted route changed fingerprint truth`);
-  if (baseline.canonicalCharacters !== hinted.canonicalCharacters) throw new Error(`${scenario} hinted route changed canonical character count`);
-  if (JSON.stringify(baseline.routes) !== JSON.stringify(hinted.routes)) throw new Error(`${scenario} hinted route changed measured route decision`);
+  if (baseline.timingHash !== hinted.timingHash) throw new Error(`${scenario} hinted timing route changed fingerprint truth`);
+  if (baseline.memoryHash !== hinted.memoryHash) throw new Error(`${scenario} hinted memory route changed fingerprint truth`);
+  if (baseline.timingCanonicalCharacters !== hinted.timingCanonicalCharacters) throw new Error(`${scenario} hinted timing route changed canonical character count`);
+  if (baseline.memoryCanonicalCharacters !== hinted.memoryCanonicalCharacters) throw new Error(`${scenario} hinted memory route changed canonical character count`);
+  if (JSON.stringify(baseline.routes) !== JSON.stringify(hinted.routes)) throw new Error(`${scenario} hinted timing route changed measured route decision`);
+  if (JSON.stringify(baseline.memoryRoutes) !== JSON.stringify(hinted.memoryRoutes)) throw new Error(`${scenario} hinted memory route changed measured route decision`);
   if (baseline.totalPreflightNodes.median <= 0) throw new Error(`${scenario} v0.17 baseline did not record adaptive preflight nodes`);
   if (hinted.totalPreflightNodes.median !== 0) throw new Error(`${scenario} hinted route unexpectedly performed adaptive preflight`);
   if (hinted.totalSizeHintFileInspections.median !== hinted.iterations) throw new Error(`${scenario} hinted route did not maintain size from exactly one file per point mutation`);
+  if (baseline.memoryPreflightNodes.median <= 0) throw new Error(`${scenario} v0.17 memory baseline did not record adaptive preflight nodes`);
+  if (hinted.memoryPreflightNodes.median !== 0) throw new Error(`${scenario} hinted memory route unexpectedly performed adaptive preflight`);
 }
 
 const observedDelta = Object.fromEntries(scenarios.map((scenario) => {
@@ -106,7 +125,7 @@ console.log(JSON.stringify({
   results,
   observedDelta,
   proofBoundary: {
-    exactness: "Both methods must produce the same final canonical hash, exact canonical character count, and route for every scenario.",
+    exactness: "Both methods must produce the same canonical hash, exact canonical character count, and route at equal mutation depths. Timing runs end after the scenario's full mutation sequence; memory runs intentionally end after one mutation and are compared only with the matching one-mutation method.",
     maintainedTruth: "The hinted path must equal an independently recomputed canonical character count after every measured final state; tests verify every intermediate transition as well.",
     mutationScope: "The v0.19 tracked path changes exactly one file per supported transition and derives the next canonical size from only that old/new file pair.",
     routeCost: "v0.17 reports structural preflight nodes. The hinted fingerprint route reports zero preflight nodes and one size-hint file inspection per point mutation.",
