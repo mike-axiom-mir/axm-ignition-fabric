@@ -42,3 +42,5 @@ jobs:
         run: npm run benchmark:workset
       - name: Run streamed lifetime peak benchmark
         run: npm run benchmark:streamed-peak
+      - name: Run segmented oversized search benchmark
+        run: npm run benchmark:segmented-search
