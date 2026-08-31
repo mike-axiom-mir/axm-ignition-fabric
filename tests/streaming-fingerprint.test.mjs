@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fnv1a32, hashValue, stableStringify } from "../src/ignition-core.js";
+import { fnv1a32, hashValueMonolithic, stableStringify } from "../src/ignition-core.js";
 import {
   forEachStableStringChunk,
   hashValueStreaming,
@@ -41,7 +41,7 @@ test("streamed canonical characters exactly equal stableStringify for representa
 
   for (const value of values) {
     assert.equal(streamedText(value), stableStringify(value));
-    assert.equal(hashValueStreaming(value), hashValue(value));
+    assert.equal(hashValueStreaming(value), hashValueMonolithic(value));
   }
 });
 
@@ -50,7 +50,7 @@ test("streaming fingerprint preserves sorted object-key semantics independent of
   const right = { m: { b: 1, y: 2 }, a: 1, z: 3 };
   assert.equal(stableStringify(left), stableStringify(right));
   assert.equal(hashValueStreaming(left), hashValueStreaming(right));
-  assert.equal(hashValueStreaming(left), hashValue(left));
+  assert.equal(hashValueStreaming(left), hashValueMonolithic(left));
 });
 
 test("streaming FNV feeds the same UTF-16 code units as the monolithic FNV", () => {
@@ -66,14 +66,14 @@ test("streaming FNV feeds the same UTF-16 code units as the monolithic FNV", () 
 test("2,500-file canonical workspace fingerprint is exactly unchanged", () => {
   const state = buildWorkspaceState({ fileCount: 2500 });
   const streamed = hashValueStreamingWithMetrics(state);
-  assert.equal(streamed.hash, hashValue(state));
+  assert.equal(streamed.hash, hashValueMonolithic(state));
   assert.equal(streamed.metrics.characterCount, stableStringify(state).length);
   assert.ok(streamed.metrics.maxChunkCharacters < streamed.metrics.characterCount / 100);
 });
 
 test("unsupported top-level values still reject rather than inventing a canonical hash", () => {
-  assert.throws(() => hashValue(undefined), TypeError);
+  assert.throws(() => hashValueMonolithic(undefined), TypeError);
   assert.throws(() => hashValueStreaming(undefined), TypeError);
-  assert.throws(() => hashValue(1n), TypeError);
+  assert.throws(() => hashValueMonolithic(1n), TypeError);
   assert.throws(() => hashValueStreaming(1n), TypeError);
 });
