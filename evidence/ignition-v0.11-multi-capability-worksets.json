@@ -1,0 +1,153 @@
+{
+  "schema": "axm.ignition-workset-evidence/v0.11",
+  "source": {
+    "githubActionsRun": 33343906055,
+    "testedHead": "69d29008cdd651ffc90cffa1c597a0e0acdadaf3",
+    "fileCount": 2500,
+    "samplesPerMode": 5,
+    "testsPassed": 63,
+    "testsFailed": 0
+  },
+  "mechanism": {
+    "runtime": "BudgetedWorksetSession",
+    "dependencyClosure": true,
+    "deterministicTopologicalExecution": true,
+    "perBodyDomainValidity": true,
+    "partialCacheHitsInsideClosure": true,
+    "retainedCacheBudget": true,
+    "transientRequiredBodiesAllowed": true,
+    "directResultHashVerification": true,
+    "budgetMeaning": "The hard byte ceiling applies to retained cache. A required closure may temporarily materialize more bytes during one run."
+  },
+  "reportExecutionOrder": [
+    "workspace-dependency-index",
+    "workspace-duplicate-index",
+    "workspace-lint-index",
+    "workspace-metadata-index",
+    "workspace-search-index",
+    "workspace-symbol-index",
+    "workspace-report-projection"
+  ],
+  "scenarios": {
+    "partialWarmReport": {
+      "direct": {
+        "reportWallMsMedian": 91.03520499999999,
+        "chargedLifecycleMsMedian": 113.664323,
+        "reportMaterializedBytesMedian": 962268,
+        "reportCacheHitsMedian": 0
+      },
+      "workset": {
+        "reportWallMsMedian": 13.913407000000007,
+        "chargedLifecycleMsMedian": 185.29231899999996,
+        "identityBuildMsMedian": 69.96996700000003,
+        "primeWallMsMedian": 80.31938899999997,
+        "reportMaterializedBytesMedian": 84820,
+        "reportCacheHitsMedian": 2,
+        "reportCacheMissesMedian": 5,
+        "cacheBytesAfterMedian": 962268
+      },
+      "observed": {
+        "reportWallMsDirectMinusWorkset": 77.12179799999998,
+        "chargedLifecycleMsDirectMinusWorkset": -71.62799599999997,
+        "reportMaterializedBytesDirectMinusWorkset": 877448,
+        "interpretation": "Existing useful warm bodies make the report itself much cheaper, but intentionally creating those warm bodies solely for one report is not beneficial in this trace."
+      }
+    },
+    "incrementalMutationReport": {
+      "mutation": "same-width import target change",
+      "changedDomains": ["content-hash", "imports"],
+      "direct": {
+        "reportWallMsMedian": 92.36027399999998,
+        "chargedLifecycleMsMedian": 133.33182299999999,
+        "reportMaterializedBytesMedian": 962268
+      },
+      "workset": {
+        "reportWallMsMedian": 16.19516299999998,
+        "chargedLifecycleMsMedian": 219.475501,
+        "identityBuildMsMedian": 71.61523,
+        "primeWallMsMedian": 90.40351400000003,
+        "mutationReceiptBuildMsMedian": 0.3298939999999675,
+        "identityAdvanceMsMedian": 1.6994440000000282,
+        "reportMaterializedBytesMedian": 124548,
+        "reportCacheHitsMedian": 1,
+        "reportCacheMissesMedian": 6,
+        "invalidatedCapabilityIds": ["workspace-dependency-index"],
+        "incrementalFilesInspected": 1,
+        "incrementalDomainsRehashed": 2,
+        "cacheBytesAfterMedian": 962268
+      },
+      "observed": {
+        "reportWallMsDirectMinusWorkset": 76.165111,
+        "chargedLifecycleMsDirectMinusWorkset": -86.14367800000002,
+        "reportMaterializedBytesDirectMinusWorkset": 837720,
+        "interpretation": "The import-bound dependency body is invalidated while the unchanged token-bound search body survives. Report-only reuse is large, but the lifecycle includes prior useful work and bootstrap costs and therefore is not compared as a one-shot replacement claim."
+      }
+    },
+    "tightBudgetThreeReports": {
+      "retainedBudgetBytes": 900000,
+      "requiredClosureBodyBytes": 962268,
+      "direct": {
+        "reportWallMsMedian": 250.516756,
+        "chargedLifecycleMsMedian": 272.41754499999996,
+        "reportMaterializedBytesMedian": 2886804
+      },
+      "workset": {
+        "reportWallMsMedian": 115.20743399999998,
+        "chargedLifecycleMsMedian": 207.685106,
+        "identityBuildMsMedian": 71.24570299999999,
+        "reportMaterializedBytesMedian": 1121724,
+        "reportCacheHitsMedian": 6,
+        "reportCacheMissesMedian": 15,
+        "budgetEvictionCountMedian": 12,
+        "transientCountMedian": 4,
+        "cacheBytesAfterMedian": 882540,
+        "finalCacheCapabilityIds": [
+          "workspace-report-projection",
+          "workspace-search-index",
+          "workspace-symbol-index"
+        ]
+      },
+      "observed": {
+        "reportWallMsDirectMinusWorkset": 135.309322,
+        "chargedLifecycleMsDirectMinusWorkset": 64.73243899999997,
+        "reportMaterializedBytesDirectMinusWorkset": 1765080,
+        "interpretation": "Repeated broad work can benefit even when the complete required closure is larger than the retained cache budget. Missing bodies are transiently materialized while the retained cache remains below 900 KB."
+      }
+    },
+    "zeroRetentionBroadReport": {
+      "retainedBudgetBytes": 0,
+      "direct": {
+        "reportWallMsMedian": 90.03402499999999,
+        "chargedLifecycleMsMedian": 112.22168600000003,
+        "reportMaterializedBytesMedian": 962268
+      },
+      "workset": {
+        "reportWallMsMedian": 97.39805700000002,
+        "chargedLifecycleMsMedian": 119.44600999999997,
+        "reportMaterializedBytesMedian": 962268,
+        "reportCacheHitsMedian": 0,
+        "reportCacheMissesMedian": 7,
+        "transientCountMedian": 7,
+        "cacheBytesAfterMedian": 0
+      },
+      "observed": {
+        "reportWallMsDirectMinusWorkset": -7.364032000000037,
+        "chargedLifecycleMsDirectMinusWorkset": -7.224323999999939,
+        "reportMaterializedBytesDirectMinusWorkset": 0,
+        "interpretation": "There is no materialization advantage by construction and the simpler direct route is faster in this hosted median. This counterexample is retained deliberately."
+      }
+    }
+  },
+  "supportedClaim": "In this deterministic workspace harness, a budgeted runtime can execute multi-capability dependency closures in deterministic topological order, reuse a valid subset of bodies, materialize only missing or stale bodies, preserve exact direct-baseline outputs, and enforce a hard retained-cache ceiling even when the required transient closure is larger than that ceiling. The mechanism is conditional: explicit prewarming can lose, and zero-retention broad work can favor the simpler direct route.",
+  "notProven": [
+    "universal speedup",
+    "hard ceiling on all transient process allocation",
+    "automatic semantic dependency inference",
+    "globally optimal workset retention",
+    "production-scale superiority",
+    "created RAM",
+    "free compute",
+    "free energy",
+    "broad statistical timing distribution"
+  ]
+}
