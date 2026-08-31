@@ -1,6 +1,6 @@
 {
   "name": "axm-ignition-fabric",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
     "benchmark:truth-budget": "node scripts/run-truth-budget-benchmark.mjs",
     "benchmark:domain-identity": "node scripts/run-domain-identity-benchmark.mjs",
     "benchmark:incremental-identity": "node scripts/run-incremental-identity-benchmark.mjs",
-    "benchmark:workset": "node scripts/run-workset-benchmark.mjs"
+    "benchmark:workset": "node scripts/run-workset-benchmark.mjs",
+    "benchmark:streamed-peak": "node scripts/run-streamed-peak-benchmark.mjs"
   }
 }
