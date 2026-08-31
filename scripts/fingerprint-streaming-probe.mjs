@@ -1,5 +1,5 @@
 import v8 from "node:v8";
-import { fnv1a32, hashValue, stableStringify } from "../src/ignition-core.js";
+import { fnv1a32, hashValueMonolithic, stableStringify } from "../src/ignition-core.js";
 import { hashValueStreaming, hashValueStreamingWithMetrics } from "../src/streaming-fingerprint.js";
 import { buildWorkspaceState } from "../src/realistic-workload.js";
 
@@ -18,7 +18,7 @@ const value = scenario === "workspace"
   ? buildWorkspaceState({ fileCount })
   : { a: 1, b: "tiny", nested: [true, null, "x"], z: { q: 2 } };
 
-const expectedHash = hashValue(value);
+const expectedHash = hashValueMonolithic(value);
 
 function memorySnapshot() {
   global.gc();
@@ -41,7 +41,7 @@ function peakDelta(stages, field) {
 
 if (measureMode === "timing") {
   const started = performance.now();
-  const hash = method === "monolithic" ? hashValue(value) : hashValueStreaming(value);
+  const hash = method === "monolithic" ? hashValueMonolithic(value) : hashValueStreaming(value);
   const wallMs = performance.now() - started;
   if (hash !== expectedHash) throw new Error("fingerprint mismatch");
   console.log(JSON.stringify({
@@ -52,7 +52,7 @@ if (measureMode === "timing") {
     fileCount: scenario === "workspace" ? fileCount : null,
     hash,
     wallMs,
-    timingBoundary: "Fresh Node process. Value construction and reference-hash verification are excluded from the measured fingerprint call.",
+    timingBoundary: "Fresh Node process. Value construction and reference-hash verification are excluded from the measured fingerprint call. Monolithic remains explicitly pinned to hashValueMonolithic after v0.17 core integration.",
   }));
   process.exit(0);
 }
