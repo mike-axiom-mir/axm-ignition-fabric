@@ -6,6 +6,14 @@
     "tests": { "passed": 98, "failed": 0 },
     "gates": 22
   },
+  "sealLineage": {
+    "failedRun": 33377512816,
+    "failedGate": "v0.13 segmented oversized search benchmark",
+    "failure": "segmentBits=0 ArrayBuffer peak does not reproduce declared atomic-body baseline",
+    "diagnosis": "The deterministic declared atomic search body remained exact, but fresh-process ArrayBuffer high-water included allocator/backing-store residue. Earlier v0.12 physical samples on the same run already showed measured ArrayBuffer above declared live-body bytes.",
+    "repair": "The historical v0.13 regression gate now keeps exact output, declared atomic-body baseline, declared segmented peak reduction, and segmented search-body reduction as hard invariants. ArrayBuffer/RSS/heap/external counters remain recorded observations and no longer require exact physical equality.",
+    "principle": "Physical allocator observations must not be promoted to deterministic release/equality invariants."
+  },
   "question": "Can adaptive fingerprint selection and hashing share one canonical traversal so the runtime avoids v0.17's separate preflight walk without worsening total resource economics?",
   "mechanism": {
     "thresholdCharacters": 65536,
@@ -83,10 +91,10 @@
   },
   "decision": {
     "corePromotion": false,
-    "liveCore": "Restore v0.17 adaptive fingerprint policy.",
+    "liveCore": "v0.17 adaptive fingerprint policy",
     "preservedExperiment": true,
     "reason": "Removing the separate preflight traversal is structurally real, but the retained canonical prefix makes the measured implementation slower and more heap-expensive on the main composite workload, with a strict loss at 500 files."
   },
   "strongestSupportedClaim": "A one-pass shared canonical traversal can eliminate v0.17's separate structural preflight and preserve exact fingerprints, but this implementation does not improve overall resource economics: on the 2,500-file fixture it avoids 803 structural node visits and lowers RSS by about 1.80 MB while increasing heapUsed peak by 66.6 KB and median time by about 1.77 ms; at 500 files it is worse on timing, heapUsed, heapTotal, and RSS. The experiment is therefore preserved but rejected for the live core.",
-  "nextGate": "Avoid paying either a separate preflight walk or a retained canonical prefix. Investigate producer-carried/cached structural size hints or incremental canonical-size metadata that can make route selection O(1) or mutation-maintained, while preserving v0.17 exact hash semantics."
+  "nextGate": "Maintain trusted canonical-size knowledge when canonical truth changes, so route selection does not require either a separate preflight scan or a retained canonical prefix. Arbitrary untracked values continue to use v0.17 fallback policy."
 }
