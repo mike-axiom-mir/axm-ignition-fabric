@@ -40,3 +40,5 @@ jobs:
         run: npm run benchmark:incremental-identity
       - name: Run dependency-aware workset benchmark
         run: npm run benchmark:workset
+      - name: Run streamed lifetime peak benchmark
+        run: npm run benchmark:streamed-peak
