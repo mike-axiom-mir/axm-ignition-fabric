@@ -38,3 +38,5 @@ jobs:
         run: npm run benchmark:domain-identity
       - name: Run incremental domain revision benchmark
         run: npm run benchmark:incremental-identity
+      - name: Run dependency-aware workset benchmark
+        run: npm run benchmark:workset
