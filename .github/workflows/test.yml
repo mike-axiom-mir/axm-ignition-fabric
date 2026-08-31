@@ -48,3 +48,5 @@ jobs:
         run: npm run benchmark:construction-lifetime
       - name: Run whole-process residual attribution benchmark
         run: npm run benchmark:residual-attribution
+      - name: Run streaming canonical fingerprint benchmark
+        run: npm run benchmark:streaming-fingerprint
