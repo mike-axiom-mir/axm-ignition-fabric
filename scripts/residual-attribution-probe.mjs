@@ -1,5 +1,5 @@
 import v8 from "node:v8";
-import { hashValue } from "../src/ignition-core.js";
+import { hashValueMonolithic } from "../src/ignition-core.js";
 import { REALISTIC_DOMAIN_BINDINGS } from "../src/realistic-mutations.js";
 import { buildWorkspaceState, realisticRequests } from "../src/realistic-workload.js";
 import { buildConstructionAwareSegmentedRegistry, utf8ByteLengthScalar } from "../src/construction-aware-metadata.js";
@@ -92,7 +92,7 @@ const canonicalStateFacts = {
 };
 checkpoint("canonical-state-created");
 
-let stateFingerprint = hashValue(state);
+let stateFingerprint = hashValueMonolithic(state);
 const preRunMemory = checkpoint("state-fingerprint-retained");
 const runPeak = clonePeakState(preRunMemory);
 
@@ -147,6 +147,6 @@ console.log(JSON.stringify({
     deltaFromPreRun: runPeakDeltaFromPreRun,
     sites: runPeak.sites,
   },
-  measurementBoundary: "One fresh Node process with --expose-gc. Every checkpoint and streamed run peak observation forces GC before reading process.memoryUsage()/v8 heap statistics. Stages expose object lifetime boundaries; RSS, heap, external, and ArrayBuffer are separate overlapping envelopes and must not be summed as additive categories.",
+  measurementBoundary: "One fresh Node process with --expose-gc. Every checkpoint and streamed run peak observation forces GC before reading process.memoryUsage()/v8 heap statistics. The v0.15 state-fingerprint stage is explicitly pinned to hashValueMonolithic after v0.17 core integration so historical evidence does not silently change semantics. Stages expose object lifetime boundaries; RSS, heap, external, and ArrayBuffer are separate overlapping envelopes and must not be summed as additive categories.",
   truthBoundary: "This probe measures one Node runtime, one deterministic 2,500-file fixture, one zero-retention 64-segment report, and one hosted process shape. Module/runtime baseline remains loaded for the process lifetime. Dropping references does not guarantee RSS pages are returned to the OS immediately.",
 }));
