@@ -58,3 +58,5 @@ jobs:
         run: npm run benchmark:canonical-size-hint
       - name: Run one mutation one truth advance benchmark
         run: npm run benchmark:one-truth-advance
+      - name: Run selective domain checkpoint benchmark
+        run: npm run benchmark:domain-checkpoints
