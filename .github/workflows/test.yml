@@ -52,3 +52,5 @@ jobs:
         run: npm run benchmark:streaming-fingerprint
       - name: Run adaptive core fingerprint benchmark
         run: npm run benchmark:adaptive-fingerprint
+      - name: Run shared-traversal adaptive fingerprint benchmark
+        run: npm run benchmark:shared-traversal-fingerprint
