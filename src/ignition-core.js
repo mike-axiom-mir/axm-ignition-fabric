@@ -1,11 +1,11 @@
 import { fnv1a32, stableStringify } from "./canonical-fingerprint-primitives.js";
-import { hashValueAdaptive } from "./adaptive-fingerprint.js";
+import { hashValueSharedTraversal } from "./shared-traversal-fingerprint.js";
 
 export { fnv1a32, stableStringify } from "./canonical-fingerprint-primitives.js";
 export { hashValueMonolithic } from "./canonical-fingerprint-primitives.js";
 
 export function hashValue(value) {
-  return hashValueAdaptive(value);
+  return hashValueSharedTraversal(value);
 }
 
 export class CapabilityRegistry {
