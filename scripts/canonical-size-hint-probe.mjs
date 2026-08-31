@@ -95,6 +95,7 @@ if (measureMode === "timing") {
       totalSizeHintFileInspections += 1;
     } else {
       const beforeState = state;
+      const beforeHash = stateHash;
       const patched = patchState(state, fileId, patch);
       state = patched.state;
       const adaptive = hashValueAdaptiveWithDecision(state);
@@ -105,7 +106,7 @@ if (measureMode === "timing") {
         beforeState,
         afterState: state,
         fileIndex: patched.fileIndex,
-        fromStateHash: hashValue(beforeState),
+        fromStateHash: beforeHash,
         toStateHash: stateHash,
         evidence: { benchmark: scenario, iteration },
       });
