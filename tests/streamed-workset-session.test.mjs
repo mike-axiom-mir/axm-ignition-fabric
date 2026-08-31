@@ -84,6 +84,7 @@ test("partial warm cache can feed a streamed seven-body report without keeping a
 
 test("incremental truth mutation invalidates only stale cached body before streamed closure runs", async () => {
   const before = buildWorkspaceState({ fileCount: 900 });
+  let finalState = before;
   const beforeHash = hashValue(before);
   let index = buildWorkspaceDomainEntryIndex(before, null, { stateHash: beforeHash });
   const session = new StreamedWorksetSession({
@@ -98,6 +99,7 @@ test("incremental truth mutation invalidates only stale cached body before strea
 
     const fileId = 12;
     const after = changeWorkspaceImportTarget(before, fileId, fileId + 1, fileId + 2);
+    finalState = after;
     const afterHash = hashValue(after);
     const receipt = createWorkspacePointMutationReceipt({
       beforeState: before,
@@ -114,7 +116,7 @@ test("incremental truth mutation invalidates only stale cached body before strea
     assert.ok(report.receipt.cacheMissCapabilityIds.includes("workspace-dependency-index"));
     assert.ok(report.receipt.cacheHitCapabilityIds.includes("workspace-search-index"));
   } finally {
-    await session.close({ state: after });
+    await session.close({ state: finalState });
   }
 });
 
