@@ -3,6 +3,7 @@ import { hashValue, hashValueMonolithic } from "../src/ignition-core.js";
 import { hashValueAdaptiveWithDecision, selectAdaptiveFingerprintMode } from "../src/adaptive-fingerprint.js";
 import { hashValueStreaming } from "../src/streaming-fingerprint.js";
 import {
+  advanceWorkspaceCanonicalSizeHint,
   canonicalStringCharacterLength,
   deriveWorkspacePointCanonicalCharacters,
   hashValueWithCanonicalSizeHint,
@@ -179,7 +180,27 @@ if (method === "v017") {
   route = fingerprint.mode;
   finalHash = fingerprint.hash;
   stages.push({ name: "hash-complete", memory: snapshot() });
-  tracked = applyTrackedWorkspacePointPatch({ tracked, fileId, patch, evidence: { benchmark: scenario, memory: true } });
+  createWorkspacePointMutationReceipt({
+    beforeState,
+    afterState: nextState,
+    fileIndex: patched.fileIndex,
+    fromStateHash: stateHash,
+    toStateHash: finalHash,
+    evidence: {
+      benchmark: scenario,
+      memory: true,
+      canonicalSizeHintReceiptHash: tracked.canonicalSizeHint.receiptHash,
+      canonicalSizeCharactersBefore: tracked.canonicalSizeHint.canonicalCharacters,
+      canonicalSizeCharactersAfter: derived.canonicalCharacters,
+    },
+  });
+  advanceWorkspaceCanonicalSizeHint({
+    hint: tracked.canonicalSizeHint,
+    beforeState,
+    afterState: nextState,
+    fileIndex: patched.fileIndex,
+    toStateHash: finalHash,
+  });
   stages.push({ name: "receipts-complete", memory: snapshot() });
 }
 
