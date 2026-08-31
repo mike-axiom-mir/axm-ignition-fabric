@@ -54,3 +54,5 @@ jobs:
         run: npm run benchmark:adaptive-fingerprint
       - name: Run shared-traversal adaptive fingerprint benchmark
         run: npm run benchmark:shared-traversal-fingerprint
+      - name: Run mutation-maintained canonical size hint benchmark
+        run: npm run benchmark:canonical-size-hint
