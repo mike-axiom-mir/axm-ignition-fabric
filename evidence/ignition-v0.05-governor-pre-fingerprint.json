@@ -1,0 +1,97 @@
+{
+  "schema": "axm.ignition-governor-evidence/v0.05-pre-fingerprint",
+  "status": "MEASURED_BASELINE_BEFORE_ORCHESTRATION_REPAIR",
+  "testedHead": "8d4303220b7a72de058014bd7a89d790702df162",
+  "githubActionsRunId": 33331984076,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "workspaceFiles": 2500
+  },
+  "tests": {
+    "passed": 26,
+    "failed": 0,
+    "governorPolicyTests": 7,
+    "adaptiveGovernorBenchmark": "PASS",
+    "allGovernedResultsEquivalentToDirectBaseline": true
+  },
+  "policyObservations": [
+    {
+      "case": "narrow-repeat",
+      "requests": 12,
+      "cacheBudgetBytes": 100000,
+      "modeCounts": {"direct-cold": 1, "ignition-warm": 11},
+      "governorWallTotalMs": 348.405952,
+      "governorInternalTotalMs": 168.32033,
+      "fixedDirectColdTotalMs": 188.528813,
+      "fixedIgnitionWarmTotalMs": 184.651644,
+      "fixedEagerWarmTotalMs": 279.180637,
+      "finalCacheBytes": 39728,
+      "interpretation": "Policy direction is reasonable, but Governor wall time is much larger than the oracle fixed modes because orchestration/fingerprinting overhead is included."
+    },
+    {
+      "case": "search-tight-cache",
+      "requests": 5,
+      "cacheBudgetBytes": 200000,
+      "modeCounts": {"direct-cold": 5},
+      "governorWallTotalMs": 428.082911,
+      "fixedDirectColdTotalMs": 423.102656,
+      "fixedIgnitionWarmTotalMs": 175.416351,
+      "fixedEagerWarmTotalMs": 189.162736,
+      "finalCacheBytes": 0,
+      "interpretation": "Governor correctly obeys the cache budget even though an unconstrained warm mode is faster. Resource policy and pure speed are intentionally separate objectives."
+    },
+    {
+      "case": "report-high-cache",
+      "requests": 6,
+      "cacheBudgetBytes": 2000000,
+      "modeCounts": {"ignition-cold": 1, "eager-warm": 5},
+      "governorWallTotalMs": 324.589326,
+      "fixedDirectColdTotalMs": 577.731042,
+      "fixedIgnitionWarmTotalMs": 206.437562,
+      "fixedEagerWarmTotalMs": 206.442381,
+      "finalCacheBytes": 962268,
+      "interpretation": "Governor learns/retains the broad body but pays a first-run learning plus repeated orchestration tax."
+    },
+    {
+      "case": "report-tight-cache",
+      "requests": 4,
+      "cacheBudgetBytes": 500000,
+      "modeCounts": {"ignition-cold": 4},
+      "governorWallTotalMs": 414.664877,
+      "finalCacheBytes": 0,
+      "interpretation": "Governor refuses full-body retention because the measured body exceeds budget."
+    },
+    {
+      "case": "breadth-growth",
+      "requests": 12,
+      "cacheBudgetBytes": 2000000,
+      "modeCounts": {"direct-cold": 5, "ignition-cold": 1, "ignition-warm": 6},
+      "governorWallTotalMs": 501.963143,
+      "finalCacheBytes": 962268,
+      "interpretation": "Incremental Ignition cache grows until it equals eager size as the request surface reaches the full body."
+    },
+    {
+      "case": "state-churn",
+      "requests": 8,
+      "cacheBudgetBytes": 100000,
+      "modeCounts": {"direct-cold": 7, "ignition-warm": 1},
+      "governorWallTotalMs": 62.869468,
+      "finalCacheBytes": 0,
+      "interpretation": "After measured state-change rate crosses threshold, Governor stops retaining a warm body."
+    }
+  ],
+  "diagnosedOverhead": {
+    "observation": "Governor wall time is substantially larger than its internal selected-mode timing in stable workloads.",
+    "likelyCause": "Canonical workspace state is fingerprinted in the Governor and then fingerprinted again inside the delegated direct/cold/session path. The current 2,500-file state hash is intentionally full-content and therefore nontrivial.",
+    "status": "HYPOTHESIS_SUPPORTED_BY_CODE_PATH_AND_TIMING_GAP_NOT_YET_REPAIRED",
+    "nextTest": "Compute/bind canonical state identity once and hand the trusted fingerprint into the selected execution path, then rerun equal-boundary benchmarks."
+  },
+  "strongestSupportedClaim": "The Governor can deterministically choose and refuse retention based on measured route breadth, cache budget, reuse and state churn while preserving exact results. Its current implementation has material orchestration overhead and is not yet performance-competitive with oracle fixed-mode selection on stable workloads.",
+  "boundaries": [
+    "Policy correctness is tested; performance optimality is not.",
+    "Fixed-mode and Governor timings use corrected outer wall-clock boundaries in this run.",
+    "Single hosted timings are observations, not statistical distributions.",
+    "The Governor is explicitly allowed to select non-Ignition modes."
+  ]
+}

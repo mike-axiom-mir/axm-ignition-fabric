@@ -1,0 +1,96 @@
+{
+  "schema": "axm.ignition-scoped-invalidation-evidence/v0.06",
+  "status": "MEASURED_IN_HARNESS",
+  "testedHead": "95ac5e4f13b17ed702800bcfa782f4ecbd718da3",
+  "githubActionsRunId": 33332487877,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "workspaceFiles": 2500
+  },
+  "tests": {
+    "passed": 33,
+    "failed": 0,
+    "scopedInvalidationBenchmark": "PASS",
+    "allScopedResultsEquivalentToFreshDirectBaseline": true
+  },
+  "contract": {
+    "transitionSchema": "axm.ignition-transition/v0.06",
+    "invalidationSchema": "axm.ignition-invalidation-resolution/v0.06",
+    "transitionBinding": "fromStateHash + toStateHash + changedDomains + evidence + receiptHash",
+    "unknownDomainBindingPolicy": "invalidate by default",
+    "missingReceiptPolicy": "full warm-cache invalidation"
+  },
+  "domainBindings": {
+    "workspace-metadata-index": ["metadata"],
+    "workspace-dependency-index": ["imports"],
+    "workspace-symbol-index": ["symbols"],
+    "workspace-search-index": ["tokens"],
+    "workspace-duplicate-index": ["content-hash"],
+    "workspace-lint-index": ["lint"],
+    "workspace-report-projection": ["risk"]
+  },
+  "benchmarks": [
+    {
+      "name": "path-only",
+      "transitionCount": 5,
+      "observedChangedDomains": ["metadata"],
+      "fullInvalidation": {
+        "totalWallMs": 345.602872,
+        "totalReleasedBytes": 4811340,
+        "totalRematerializedBytes": 4811340,
+        "bodiesPerTransition": 7
+      },
+      "scopedInvalidation": {
+        "totalWallMs": 13.174402,
+        "totalReleasedBytes": 137500,
+        "totalRematerializedBytes": 137500,
+        "releasedPerTransition": ["workspace-metadata-index"],
+        "rematerializedPerTransition": ["workspace-metadata-index"],
+        "bytesPerTransition": 27500
+      },
+      "saved": {
+        "rematerializedBytes": 4673840,
+        "releasedBytes": 4673840,
+        "observedWallMs": 332.42847
+      },
+      "equivalent": true
+    },
+    {
+      "name": "import-target",
+      "transitionCount": 4,
+      "observedChangedDomains": ["content-hash", "imports"],
+      "fullInvalidation": {
+        "totalWallMs": 277.791252,
+        "totalReleasedBytes": 3849072,
+        "totalRematerializedBytes": 3849072,
+        "bodiesPerTransition": 7
+      },
+      "scopedInvalidation": {
+        "totalWallMs": 18.970253,
+        "totalReleasedBytes": 198912,
+        "totalRematerializedBytes": 198912,
+        "releasedPerTransition": ["workspace-dependency-index", "workspace-duplicate-index"],
+        "rematerializedPerTransition": ["workspace-dependency-index", "workspace-duplicate-index"],
+        "bytesPerTransition": 49728
+      },
+      "saved": {
+        "rematerializedBytes": 3650160,
+        "releasedBytes": 3650160,
+        "observedWallMs": 258.820999
+      },
+      "equivalent": true
+    }
+  ],
+  "timingBoundary": "Transition receipt generation is upstream and excluded. Measured wall time includes cache invalidation/release plus the first report run against the new canonical state.",
+  "strongestSupportedClaim": "In this deterministic workspace harness, a trusted hash-bound change receipt can scope warm-cache invalidation to declared affected source domains, preserving exact results while avoiding reconstruction of unaffected derived bodies. Missing or untrusted transition evidence falls back to full invalidation.",
+  "boundaries": [
+    "Does not prove arbitrary dependency inference from unknown software state.",
+    "Correctness depends on the upstream changed-domain receipt being complete and truthful.",
+    "The current domain bindings are explicit harness declarations, not automatically discovered universal semantics.",
+    "Transition receipt generation cost is excluded from this benchmark and belongs to the upstream canonical truth layer.",
+    "Does not prove production-scale performance or universal speedup.",
+    "Does not create RAM, compute, energy, or hardware resources."
+  ],
+  "nextGate": "Add hard-budget value-aware eviction so retained bodies compete by measured reconstruction cost, reuse and bytes while preserving scoped invalidation and exact truth. Compare with full retention, LRU-like/simple policies, and no retention."
+}

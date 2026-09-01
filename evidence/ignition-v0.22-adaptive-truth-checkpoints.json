@@ -1,0 +1,260 @@
+{
+  "schema": "axm.ignition-adaptive-truth-checkpoint-evidence/v0.22",
+  "sourceHead": "2c9d4383713bc05c6594b87a2439abb8d3347069",
+  "sourceRun": 33393860156,
+  "sourceJob": 99493611527,
+  "sourceConclusion": "success",
+  "tests": { "passed": 126, "failed": 0 },
+  "ciEvidenceGates": { "passed": 26, "failed": 0 },
+  "samplesPerPolicyScenario": 5,
+  "fileCount": 2500,
+  "checkpointBudgetBytes": 20000,
+  "valueWindow": 4,
+  "policies": ["none", "frequency", "oracle", "adaptive", "all-seven"],
+  "invariants": {
+    "legacyStateHashPreservedAcrossPolicies": true,
+    "canonicalSizePreservedAcrossPolicies": true,
+    "domainHashesAndRevisionsPreservedAcrossPolicies": true,
+    "stateFingerprintReplayHeldConstantAcrossPolicies": true,
+    "adaptiveHardBudgetNeverExceeded": true,
+    "allSevenIsOverBudgetReferenceOnly": true,
+    "checkpointBuildAndEvictionWorkCharged": true
+  },
+  "results": {
+    "frequencyVsPosition": {
+      "finalHash": "6ecb4baf",
+      "finalCanonicalCharacters": 1284934,
+      "stateFingerprintCharactersRehashedAllPolicies": 7711531,
+      "none": {
+        "finalSelectedDomains": [],
+        "maxPersistentDomainCheckpointBytes": 0,
+        "domainCanonicalCharactersRehashed": 1264975,
+        "domainEntriesRehashed": 35000,
+        "domainEntriesSkipped": 0,
+        "checkpointBuildCanonicalCharacters": 0,
+        "checkpointBytesBuilt": 0,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 0,
+        "chargedDomainCanonicalWork": 1264975,
+        "wallMsMedian": 111.345177
+      },
+      "frequency": {
+        "finalSelectedDomains": ["content-hash", "metadata"],
+        "maxPersistentDomainCheckpointBytes": 20000,
+        "domainCanonicalCharactersRehashed": 1063603,
+        "domainEntriesRehashed": 25004,
+        "domainEntriesSkipped": 9996,
+        "checkpointBuildCanonicalCharacters": 186421,
+        "checkpointBytesBuilt": 20000,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 1,
+        "chargedDomainCanonicalWork": 1250024,
+        "wallMsMedian": 101.41296400000002,
+        "timingCounterexample": "This static frequency policy was faster than adaptive in this hosted run even though adaptive performed less charged canonical work."
+      },
+      "oracle": {
+        "finalSelectedDomains": ["content-hash", "imports"],
+        "maxPersistentDomainCheckpointBytes": 20000,
+        "domainCanonicalCharactersRehashed": 817099,
+        "domainEntriesRehashed": 15008,
+        "domainEntriesSkipped": 19992,
+        "checkpointBuildCanonicalCharacters": 112045,
+        "checkpointBytesBuilt": 20000,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 1,
+        "chargedDomainCanonicalWork": 929144,
+        "wallMsMedian": 108.05578599999998
+      },
+      "adaptive": {
+        "finalSelectedDomains": ["content-hash", "imports"],
+        "maxPersistentDomainCheckpointBytes": 20000,
+        "domainCanonicalCharactersRehashed": 1041037,
+        "domainEntriesRehashed": 25004,
+        "domainEntriesSkipped": 9996,
+        "checkpointBuildCanonicalCharacters": 112045,
+        "checkpointBytesBuilt": 20000,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 1,
+        "chargedDomainCanonicalWork": 1153082,
+        "wallMsMedian": 113.156094,
+        "selectionTimeline": [
+          { "step": 8, "selectedDomains": ["content-hash", "imports"], "changedDomains": ["content-hash", "imports"] }
+        ],
+        "metadataObservation": {
+          "mutationCount": 6,
+          "recentOpportunityCharacters": 0,
+          "selected": false,
+          "reason": "All six metadata mutations occurred at file zero, so no unchanged domain-entry prefix could be reused."
+        },
+        "contentHashObservation": {
+          "mutationCount": 4,
+          "fallbackCount": 2,
+          "checkpointHitCount": 2,
+          "actualCharactersSaved": 100590
+        },
+        "importsObservation": {
+          "mutationCount": 4,
+          "fallbackCount": 2,
+          "checkpointHitCount": 2,
+          "actualCharactersSaved": 123348
+        }
+      },
+      "allSeven": {
+        "finalSelectedDomains": ["content-hash", "imports", "lint", "metadata", "risk", "symbols", "tokens"],
+        "maxPersistentDomainCheckpointBytes": 70000,
+        "domainCanonicalCharactersRehashed": 816907,
+        "domainEntriesRehashed": 15008,
+        "domainEntriesSkipped": 19992,
+        "checkpointBuildCanonicalCharacters": 1430481,
+        "checkpointBytesBuilt": 70000,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 1,
+        "chargedDomainCanonicalWork": 2247388,
+        "wallMsMedian": 114.68607499999999,
+        "overBudgetReference": true
+      },
+      "observedAdaptiveDelta": {
+        "vsNone": {
+          "domainCanonicalCharactersSaved": 223938,
+          "chargedDomainCanonicalWorkSaved": 111893,
+          "timingNoneMinusAdaptiveMs": -1.8109169999999892
+        },
+        "vsFrequency": {
+          "domainCanonicalCharactersSaved": 22566,
+          "chargedDomainCanonicalWorkSaved": 96942,
+          "timingFrequencyMinusAdaptiveMs": -11.74312999999998
+        },
+        "vsOracle": {
+          "chargedDomainCanonicalWorkExtra": 223938,
+          "timingAdaptiveMinusOracleMs": 5.1003080000000125
+        },
+        "vsAllSeven": {
+          "peakPersistentCheckpointBytesSaved": 50000,
+          "checkpointBytesBuiltSaved": 50000,
+          "chargedDomainCanonicalWorkSaved": 1094306
+        }
+      }
+    },
+    "phaseShift": {
+      "finalHash": "620413c8",
+      "finalCanonicalCharacters": 1284921,
+      "stateFingerprintCharactersRehashedAllPolicies": 5334,
+      "none": {
+        "finalSelectedDomains": [],
+        "maxPersistentDomainCheckpointBytes": 0,
+        "domainCanonicalCharactersRehashed": 1128810,
+        "domainEntriesRehashed": 32500,
+        "domainEntriesSkipped": 0,
+        "checkpointBuildCanonicalCharacters": 0,
+        "checkpointBytesBuilt": 0,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 0,
+        "chargedDomainCanonicalWork": 1128810,
+        "wallMsMedian": 35.61117100000001
+      },
+      "frequency": {
+        "finalSelectedDomains": ["content-hash", "metadata"],
+        "maxPersistentDomainCheckpointBytes": 20000,
+        "domainCanonicalCharactersRehashed": 247570,
+        "domainEntriesRehashed": 10009,
+        "domainEntriesSkipped": 22491,
+        "checkpointBuildCanonicalCharacters": 186421,
+        "checkpointBytesBuilt": 20000,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 1,
+        "chargedDomainCanonicalWork": 433991,
+        "wallMsMedian": 23.336006999999995,
+        "counterexample": "A lucky static frequency selection outperformed adaptive in both charged canonical work and hosted timing for this phase-shift workload."
+      },
+      "oracle": {
+        "finalSelectedDomains": ["metadata"],
+        "maxPersistentDomainCheckpointBytes": 20000,
+        "domainCanonicalCharactersRehashed": 874,
+        "domainEntriesRehashed": 13,
+        "domainEntriesSkipped": 32487,
+        "checkpointBuildCanonicalCharacters": 248132,
+        "checkpointBytesBuilt": 30000,
+        "checkpointBytesEvicted": 20000,
+        "reconfigurationCount": 2,
+        "chargedDomainCanonicalWork": 249006,
+        "wallMsMedian": 18.96708799999999,
+        "selectionTimeline": [
+          { "step": 0, "selectedDomains": ["content-hash", "imports"] },
+          { "step": 5, "selectedDomains": ["metadata"] }
+        ]
+      },
+      "adaptive": {
+        "finalSelectedDomains": ["metadata"],
+        "finalDomainCheckpointBytes": 10000,
+        "maxPersistentDomainCheckpointBytes": 20000,
+        "domainCanonicalCharactersRehashed": 496836,
+        "domainEntriesRehashed": 15007,
+        "domainEntriesSkipped": 17493,
+        "checkpointBuildCanonicalCharacters": 446008,
+        "checkpointBytesBuilt": 50000,
+        "checkpointBytesEvicted": 20000,
+        "reconfigurationCount": 3,
+        "chargedDomainCanonicalWork": 942844,
+        "wallMsMedian": 39.05168600000002,
+        "selectionTimeline": [
+          { "step": 2, "selectedDomains": ["content-hash", "imports"], "changedDomains": ["content-hash", "imports"] },
+          { "step": 6, "selectedDomains": ["imports", "metadata"], "changedDomains": ["metadata"] },
+          { "step": 8, "selectedDomains": ["metadata"], "changedDomains": ["metadata"] }
+        ],
+        "migrationTax": {
+          "retainedImportsCheckpointRebuiltDuringPairToImportsMetadataTransition": true,
+          "metadataCheckpointBuiltMoreThanOnce": true,
+          "cumulativeBytesBuiltUnder20000ByteResidencyLimit": 50000,
+          "buildCanonicalCharacters": 446008,
+          "interpretation": "The selection policy changes correctly, but checkpoint-set replacement rebuilds retained checkpoint truth and becomes the dominant new avoidable cost."
+        }
+      },
+      "allSeven": {
+        "finalSelectedDomains": ["content-hash", "imports", "lint", "metadata", "risk", "symbols", "tokens"],
+        "maxPersistentDomainCheckpointBytes": 70000,
+        "domainCanonicalCharactersRehashed": 874,
+        "domainEntriesRehashed": 13,
+        "domainEntriesSkipped": 32487,
+        "checkpointBuildCanonicalCharacters": 1430481,
+        "checkpointBytesBuilt": 70000,
+        "checkpointBytesEvicted": 0,
+        "reconfigurationCount": 1,
+        "chargedDomainCanonicalWork": 1431355,
+        "wallMsMedian": 30.957739000000004,
+        "overBudgetReference": true
+      },
+      "observedAdaptiveDelta": {
+        "vsNone": {
+          "domainCanonicalCharactersSaved": 631974,
+          "chargedDomainCanonicalWorkSaved": 185966,
+          "timingNoneMinusAdaptiveMs": -3.440515000000005
+        },
+        "vsFrequency": {
+          "domainCanonicalCharactersSaved": -249266,
+          "chargedDomainCanonicalWorkSaved": -508853,
+          "timingFrequencyMinusAdaptiveMs": -15.715679000000023
+        },
+        "vsOracle": {
+          "chargedDomainCanonicalWorkExtra": 693838,
+          "timingAdaptiveMinusOracleMs": 20.084598000000028
+        },
+        "vsAllSeven": {
+          "peakPersistentCheckpointBytesSaved": 50000,
+          "checkpointBytesBuiltSaved": 20000,
+          "chargedDomainCanonicalWorkSaved": 488511
+        }
+      }
+    }
+  },
+  "proofBoundary": {
+    "exactness": "All policies end at the same legacy-compatible state hash, exact canonical size, domain hashes, and domain revisions for each scenario.",
+    "isolation": "Every policy uses the same v0.20 state-fingerprint checkpoint mechanism and reports identical state-fingerprint replay work within a scenario. v0.22 varies only domain-checkpoint retention.",
+    "hardBudget": "Adaptive, frequency, and oracle policies retain at most 20,000 domain-checkpoint bytes. The 70,000-byte all-seven policy is explicitly over budget and is retained only as a reference.",
+    "adaptiveAdmission": "Uncheckpointed domains use a deterministic position-weighted replay-opportunity estimate based on observed full replay cost and mutation position. Retained checkpoints use measured avoided replay. Admission also charges one full-domain build-cost penalty.",
+    "buildAndEviction": "Checkpoint construction and replacement occur in the measured region. Canonical build work, bytes built, bytes evicted, and reconfiguration count are charged. v0.22 currently rebuilds the selected checkpoint set when selection changes, including checkpoint truth that remains selected.",
+    "timing": "Five fresh hosted Node processes per policy/scenario. Shared initial v0.20 no-domain-checkpoint bootstrap and external aggregate verification are excluded. Hosted medians are observations, not hard speed invariants.",
+    "hardware": "This is deterministic Node software evidence only. No chip, PIM, datacenter, fleet, energy, or hardware-speed claim is made."
+  },
+  "strongestSupportedClaim": "In this deterministic 2,500-file tracked-workspace harness, a recent-value domain-checkpoint Governor preserved exact legacy-compatible state/domain truth while enforcing a 20,000-byte hard residency budget and distinguishing mutation frequency from checkpoint value. Six first-file metadata mutations earned zero retention opportunity, while later near-tail import/content-hash mutations caused the Governor to retain the relevant 20 KB pair; this reduced domain replay by 223,938 characters versus no domain checkpoints, although hosted median time was 1.81 ms slower after learning and build overhead. In a phase-shift workload the Governor correctly evicted stale import truth and ended with a 10 KB metadata checkpoint, but current selection changes rebuilt retained checkpoint sets, charging 50 KB cumulative checkpoint construction and 446,008 build characters; adaptive remained 3.44 ms slower than no checkpoints and substantially worse than both the oracle and a lucky static frequency policy. The retention policy is therefore structurally valid, while selection migration/rebuild cost is the next bottleneck.",
+  "nextGate": "v0.23 retain surviving checkpoint truth across selection changes instead of rebuilding it"
+}

@@ -1,0 +1,139 @@
+{
+  "schema": "axm.ignition-canonical-size-hint-evidence/v0.19",
+  "status": "CONDITIONAL_ROUTE_KNOWLEDGE_WIN",
+  "measurementHead": "096dbe0c017f842e672187458f51595f8b2fad1b",
+  "measurementRun": 33379985953,
+  "tests": { "passed": 106, "failed": 0 },
+  "gates": 23,
+  "question": "Can exact canonical-size route knowledge be maintained from trusted point mutations so fingerprint routing avoids v0.17's repeated structural preflight without weakening canonical truth?",
+  "mechanism": {
+    "trackedState": "canonical workspace state plus state-bound canonical-size hint receipt",
+    "bootstrap": "compute exact canonical character count without materializing stableStringify(state)",
+    "pointMutation": "derive next exact canonical size from the old/new canonical representation of exactly one changed file",
+    "route": "choose monolithic or streaming from exact maintained canonical character count",
+    "fallback": "ordinary untracked hashValue(value) remains v0.17 adaptive preflight"
+  },
+  "failureLineage": [
+    {
+      "run": 33379434647,
+      "kind": "test-fixture",
+      "failure": "same-width import test selected deterministic duplicate file 0, which intentionally has no imports",
+      "repair": "move same-width fixture to file 1 and toggle file-2.js/file-3.js; no algorithm change"
+    },
+    {
+      "run": 33379628571,
+      "kind": "benchmark-contract",
+      "failure": "benchmark compared eight-mutation timing final state with one-mutation memory final state and mislabeled differing hashes as instability",
+      "repair": "compare timing-vs-timing and memory-vs-memory at equal mutation depth; no algorithm change"
+    }
+  ],
+  "scenarios": {
+    "path": {
+      "fileCount": 2500,
+      "timingIterations": 8,
+      "timingHash": "d1aa0108",
+      "timingCanonicalCharacters": 1284880,
+      "memoryHashAfterOneMutation": "3e00ed67",
+      "memoryCanonicalCharactersAfterOneMutation": 1284859,
+      "route": "streaming",
+      "v017": {
+        "timingMedianMs": 85.59828,
+        "preflightNodes": 6424,
+        "memoryHeapUsedPeakBytes": 19440,
+        "memoryHeapTotalPeakBytes": 0,
+        "memoryRssPeakBytes": 1810432,
+        "memoryPreflightNodes": 803
+      },
+      "hinted": {
+        "timingMedianMs": 87.111309,
+        "preflightNodes": 0,
+        "sizeHintFileInspections": 8,
+        "memoryHeapUsedPeakBytes": 30736,
+        "memoryHeapTotalPeakBytes": 262144,
+        "memoryRssPeakBytes": 262144,
+        "memoryPreflightNodes": 0
+      },
+      "deltaV017MinusHinted": {
+        "timingMs": -1.513029,
+        "preflightNodesAvoided": 6424,
+        "heapUsedPeakBytes": -11296,
+        "heapTotalPeakBytes": -262144,
+        "rssPeakBytes": 1548288
+      }
+    },
+    "sameWidth": {
+      "fileCount": 2500,
+      "timingIterations": 8,
+      "timingHash": "7e77d21a",
+      "timingCanonicalCharacters": 1284856,
+      "memoryHashAfterOneMutation": "ef659207",
+      "memoryCanonicalCharactersAfterOneMutation": 1284856,
+      "route": "streaming",
+      "v017": {
+        "timingMedianMs": 90.19356,
+        "preflightNodes": 6424,
+        "memoryHeapUsedPeakBytes": 19648,
+        "memoryHeapTotalPeakBytes": 0,
+        "memoryRssPeakBytes": 1814528,
+        "memoryPreflightNodes": 803
+      },
+      "hinted": {
+        "timingMedianMs": 85.682856,
+        "preflightNodes": 0,
+        "sizeHintFileInspections": 8,
+        "memoryHeapUsedPeakBytes": 30160,
+        "memoryHeapTotalPeakBytes": 262144,
+        "memoryRssPeakBytes": 176128,
+        "memoryPreflightNodes": 0
+      },
+      "deltaV017MinusHinted": {
+        "timingMs": 4.510704,
+        "preflightNodesAvoided": 6424,
+        "heapUsedPeakBytes": -10512,
+        "heapTotalPeakBytes": -262144,
+        "rssPeakBytes": 1638400
+      },
+      "interpretation": "Canonical character count remains exactly unchanged while state hash truth changes; maintained representation size is not treated as identity."
+    },
+    "threshold": {
+      "fileCount": 100,
+      "timingIterations": 1,
+      "hash": "9f90a0c3",
+      "canonicalCharacters": 68989,
+      "route": "streaming",
+      "v017": {
+        "timingMedianMs": 2.871659,
+        "preflightNodes": 586,
+        "memoryHeapUsedPeakBytes": 65480,
+        "memoryHeapTotalPeakBytes": 262144,
+        "memoryRssPeakBytes": 1048576,
+        "memoryPreflightNodes": 586
+      },
+      "hinted": {
+        "timingMedianMs": 3.251484,
+        "preflightNodes": 0,
+        "sizeHintFileInspections": 1,
+        "memoryHeapUsedPeakBytes": 72360,
+        "memoryHeapTotalPeakBytes": 262144,
+        "memoryRssPeakBytes": 524288,
+        "memoryPreflightNodes": 0
+      },
+      "deltaV017MinusHinted": {
+        "timingMs": -0.379825,
+        "preflightNodesAvoided": 586,
+        "heapUsedPeakBytes": -6880,
+        "heapTotalPeakBytes": 0,
+        "rssPeakBytes": 524288
+      },
+      "interpretation": "A tracked one-file mutation crosses the 65,536-character route threshold without any adaptive selection scan."
+    }
+  },
+  "truthContract": {
+    "canonicalSize": "maintained size must equal independently recomputed canonical character count at every tested transition",
+    "stateHash": "hint is state-bound and stale/tampered hints reject",
+    "domainIdentity": "the same mutation receipt feeds the existing v0.10 incremental domain index",
+    "untrackedFallback": "untracked arbitrary values continue using sealed v0.17 adaptive fingerprinting"
+  },
+  "strongestSupportedClaim": "In this deterministic tracked-workspace harness, exact canonical representation size can be maintained from one changed file per trusted point mutation and used to choose the same fingerprint route with zero adaptive preflight nodes. Across eight 2,500-file mutations this replaced 6,424 preflight node visits with eight one-file size inspections while preserving exact hashes and canonical lengths. Timing was mixed and heapUsed peak was modestly worse, so v0.19 supports incremental route knowledge, not a universal speed or memory win.",
+  "nextGate": "Unify mutation-maintained canonical size, state fingerprint, and incremental domain identity so one trusted mutation event advances all three without redundant whole-state hashing or duplicate per-file inspection."
+}

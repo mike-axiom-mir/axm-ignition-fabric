@@ -1,0 +1,85 @@
+{
+  "schema": "axm.ignition-construction-lifetime-evidence/v0.14",
+  "status": "TESTED",
+  "sourceWorkflowRun": 33366691273,
+  "sourceHead": "bcdc346df6062fcf888cce8fac30586515ea4d05",
+  "fixture": {
+    "fileCount": 2500,
+    "searchSegmentBits": 6,
+    "memorySamplesPerMode": 5,
+    "timingSamplesPerMode": 5
+  },
+  "controlledChange": {
+    "baseline": "TextEncoder.encode(file.content).byteLength",
+    "candidate": "allocation-free scalar UTF-8 byte-length counter",
+    "unchanged": [
+      "persistent metadata array layout",
+      "metadata allocatedBytes",
+      "segmented search implementation",
+      "streamed workset runtime",
+      "zero-retention policy",
+      "request",
+      "workspace state"
+    ]
+  },
+  "correctness": {
+    "testsPassed": 79,
+    "testsFailed": 0,
+    "utf8RepresentativeEquivalence": true,
+    "metadataBodyEquivalent": true,
+    "metadataResultHash": "614ee29b",
+    "reportResultHash": "daa06e7e"
+  },
+  "metadataOnly": {
+    "persistentBodyBytes": 27500,
+    "encoder": {
+      "arrayBufferPeakMedianBytes": 809646,
+      "externalPeakMedianBytes": 1041655,
+      "rssPeakMedianBytes": 1703936,
+      "heapUsedPeakMedianBytes": 20320,
+      "wallMedianMs": 6.766237,
+      "arrayBufferPeakSite": "after-materialize:workspace-metadata-index"
+    },
+    "scalar": {
+      "arrayBufferPeakMedianBytes": 27500,
+      "externalPeakMedianBytes": 27504,
+      "rssPeakMedianBytes": 262144,
+      "heapUsedPeakMedianBytes": 20128,
+      "wallMedianMs": 7.391031,
+      "arrayBufferPeakSite": "after-materialize:workspace-metadata-index"
+    },
+    "arrayBufferPeakSavedBytes": 782146
+  },
+  "segmentedReport": {
+    "totalDeclaredRuntimeBodyBytes": 147572,
+    "declaredLiveBodyPeakBytes": 39820,
+    "encoder": {
+      "arrayBufferPeakMedianBytes": 808449,
+      "externalPeakMedianBytes": 1041655,
+      "rssPeakMedianBytes": 4030464,
+      "heapUsedPeakMedianBytes": 116280,
+      "wallMedianMs": 74.34828,
+      "arrayBufferPeakSite": "after-materialize:workspace-metadata-index"
+    },
+    "scalar": {
+      "arrayBufferPeakMedianBytes": 39820,
+      "externalPeakMedianBytes": 39824,
+      "rssPeakMedianBytes": 2613248,
+      "heapUsedPeakMedianBytes": 118328,
+      "wallMedianMs": 72.663903,
+      "arrayBufferPeakSite": "after-materialize:workspace-symbol-index"
+    },
+    "arrayBufferPeakSavedBytes": 768629,
+    "scalarPhysicalGapVsDeclaredBytes": 0
+  },
+  "supportedClaim": "In this deterministic 2,500-file typed-array workspace harness, replacing per-file TextEncoder.encode(...).byteLength metadata construction with an allocation-free scalar UTF-8 byte counter preserved exact persistent metadata and report outputs while reducing the median metadata-only ArrayBuffer peak from 809,646 B to 27,500 B and the median 64-segment report ArrayBuffer peak from 808,449 B to 39,820 B, exactly matching the declared live runtime-body peak for that report fixture.",
+  "truthBoundary": [
+    "This isolates TextEncoder-backed temporary typed-array allocation as the dominant ArrayBuffer construction peak in this fixture, not as a universal JavaScript memory rule.",
+    "It does not prove whole-process RSS equals the declared runtime-body peak.",
+    "It does not remove JavaScript heap/output-object memory.",
+    "RSS, heapUsed, and allocator behavior remain separate measurements.",
+    "Hosted timing medians are workload-specific observations, not universal speed claims.",
+    "The scalar UTF-8 counter is tested against representative Unicode and malformed surrogate cases but is not a standards-conformance proof over every possible JavaScript string."
+  ],
+  "nextEvidenceGate": "Measure and attribute the remaining non-ArrayBuffer process/heap/output footprint now that typed-array backing-store peak has converged to the declared live-body peak."
+}

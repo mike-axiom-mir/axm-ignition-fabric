@@ -1,0 +1,99 @@
+{
+  "schema": "axm.ignition-evidence/v0.12",
+  "name": "streamed-lifetime-aware-worksets",
+  "status": "observed",
+  "fixture": {
+    "workspaceFiles": 2500,
+    "reportResultHash": "daa06e7e",
+    "singleResultHash": "b1e21462",
+    "samplesPerMode": 5,
+    "memoryProcessMode": "fresh Node child process with --expose-gc",
+    "primaryPhysicalMetric": "process.memoryUsage().arrayBuffers"
+  },
+  "lineage": {
+    "initialFailedRun": {
+      "workflowRunId": 33346848529,
+      "jobId": 99352473360,
+      "cause": "test harness ReferenceError: `after` was scoped inside try and referenced in finally",
+      "architecturalInterpretation": "No architecture claim was made from this run. Five of six new streamed tests had already passed; the failure was repaired as a test-scope bug and retained in lineage."
+    },
+    "successfulMeasurementRun": {
+      "workflowRunId": 33346982378,
+      "jobId": 99352863735,
+      "tests": { "passed": 69, "failed": 0 },
+      "allPriorEvidenceGatesPassed": true,
+      "streamedPeakGatePassed": true
+    }
+  },
+  "reportScenario": {
+    "totalMaterializedBytes": {
+      "wholeClosureMedian": 962268,
+      "streamedMedian": 962268,
+      "delta": 0
+    },
+    "declaredPeakLiveBodyBytes": {
+      "wholeClosureMedian": 962268,
+      "streamedMedian": 837720,
+      "savedMedian": 124548
+    },
+    "measuredArrayBufferPeakDeltaBytes": {
+      "wholeClosure": { "median": 962268, "min": 962268, "max": 962268 },
+      "streamed": { "median": 837720, "min": 837720, "max": 1025739 },
+      "savedMedian": 124548
+    },
+    "measuredExternalPeakDeltaBytes": {
+      "wholeClosureMedian": 962272,
+      "streamedMedian": 1101928,
+      "streamedMinusWholeMedian": 139656,
+      "interpretation": "The broader Node external metric moved in the opposite direction and is not used as evidence for a whole-process memory win."
+    },
+    "measuredRssPeakDeltaBytes": {
+      "wholeClosureMedian": 18202624,
+      "streamedMedian": 15327232,
+      "interpretation": "RSS is recorded as a secondary noisy process/allocator observation, not promoted as the primary claim."
+    },
+    "normalTimingMs": {
+      "wholeClosure": { "median": 78.54768299999999, "min": 76.99070499999999, "max": 82.00974500000001 },
+      "streamed": { "median": 78.726045, "min": 75.57423299999999, "max": 80.478028 },
+      "wholeMinusStreamedMedian": -0.17836200000000701,
+      "interpretation": "No speedup is supported. Streamed execution was approximately tied and slightly slower on the hosted median."
+    }
+  },
+  "singleBodyCounterexample": {
+    "totalMaterializedBytes": {
+      "wholeClosureMedian": 39728,
+      "streamedMedian": 39728
+    },
+    "declaredPeakLiveBodyBytes": {
+      "wholeClosureMedian": 39728,
+      "streamedMedian": 39728,
+      "savedMedian": 0
+    },
+    "measuredArrayBufferPeakDeltaBytes": {
+      "wholeClosureMedian": 39728,
+      "streamedMedian": 39728,
+      "savedMedian": 0
+    },
+    "normalTimingMs": {
+      "wholeClosureMedian": 7.054275000000004,
+      "streamedMedian": 7.006777999999997
+    },
+    "interpretation": "Streaming cannot reduce peak runtime-body bytes when the request needs only one indivisible body."
+  },
+  "mechanism": {
+    "wholeClosure": "Materialize all missing closure runtime bodies before executing the deterministic topological order.",
+    "streamed": "Materialize the next ready missing runtime body, execute it immediately, then retain it under policy or release/null the runtime reference before proceeding. Dependency outputs remain available after dependency runtime bodies are released.",
+    "retainedBudget": "The byte ceiling remains a hard retained-cache budget. One currently executing miss may temporarily exist in addition to retained cache."
+  },
+  "strongestSupportedClaim": "In this deterministic typed-array workspace harness, streamed lifetime-aware workset execution reduced the median live ArrayBuffer peak for the seven-body report from 962,268 B to 837,720 B while materializing the same total 962,268 B and producing the same deterministic result hash. The single-body counterexample showed zero peak savings. Normal hosted timing did not improve.",
+  "truthBoundary": [
+    "This does not prove universal physical RAM reduction.",
+    "This does not prove total RSS reduction or external-memory reduction.",
+    "This does not prove universal speedup; the streamed report median was slightly slower in the measured timing run.",
+    "Result/output object memory is outside the declared runtime-body byte accounting.",
+    "Forced-GC memory probes are separated from normal timing probes.",
+    "The current peak floor is bounded by the largest indivisible required capability body, which is the 837,720 B search index in this fixture.",
+    "This does not prove created RAM, free compute, or free energy."
+  ],
+  "nextGate": "Test segmented/chunked oversized capability bodies so a single atomic body no longer defines the minimum possible active runtime-body peak."
+}

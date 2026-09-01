@@ -1,0 +1,64 @@
+name: test
+
+on:
+  push:
+    branches:
+      - "axm/ignition-v0.01-materialization-core"
+  pull_request:
+
+jobs:
+  node-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run tests
+        run: npm test
+      - name: Run deterministic comparison demo
+        run: npm run demo
+      - name: Run isolated memory benchmark
+        run: npm run benchmark:memory
+      - name: Run realistic parsed/indexed workload benchmark
+        run: npm run benchmark:realistic
+      - name: Run warm/direct break-even benchmark
+        run: npm run benchmark:warm
+      - name: Run adaptive Governor benchmark
+        run: npm run benchmark:governor
+      - name: Run scoped invalidation benchmark
+        run: npm run benchmark:invalidation
+      - name: Run hard-budget retention benchmark
+        run: npm run benchmark:retention
+      - name: Run truth-aware hard-budget benchmark
+        run: npm run benchmark:truth-budget
+      - name: Run versioned domain identity benchmark
+        run: npm run benchmark:domain-identity
+      - name: Run incremental domain revision benchmark
+        run: npm run benchmark:incremental-identity
+      - name: Run dependency-aware workset benchmark
+        run: npm run benchmark:workset
+      - name: Run streamed lifetime peak benchmark
+        run: npm run benchmark:streamed-peak
+      - name: Run segmented oversized search benchmark
+        run: npm run benchmark:segmented-search
+      - name: Run construction lifetime benchmark
+        run: npm run benchmark:construction-lifetime
+      - name: Run whole-process residual attribution benchmark
+        run: npm run benchmark:residual-attribution
+      - name: Run streaming canonical fingerprint benchmark
+        run: npm run benchmark:streaming-fingerprint
+      - name: Run adaptive core fingerprint benchmark
+        run: npm run benchmark:adaptive-fingerprint
+      - name: Run shared-traversal adaptive fingerprint benchmark
+        run: npm run benchmark:shared-traversal-fingerprint
+      - name: Run mutation-maintained canonical size hint benchmark
+        run: npm run benchmark:canonical-size-hint
+      - name: Run one mutation one truth advance benchmark
+        run: npm run benchmark:one-truth-advance
+      - name: Run selective domain checkpoint benchmark
+        run: npm run benchmark:domain-checkpoints
+      - name: Run adaptive truth checkpoint retention benchmark
+        run: npm run benchmark:adaptive-truth-checkpoints
