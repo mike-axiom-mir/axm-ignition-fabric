@@ -186,7 +186,7 @@ test("phase-shift decisions stay fixed while cumulative construction falls to 30
   for (let i = 0; i < 5; i += 1) {
     governor.applyPointPatch({
       fileId: 2499,
-      patch: pathPatch(governor.tracked.state, 2499, `-late-metadata-${i}`),
+      patch: pathPatch(governor.tracked.state, 2499, `-phase-late-${i}`),
       evidence: { test: "v0.23-phase-shift", i },
     });
   }
