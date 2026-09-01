@@ -10,8 +10,8 @@ const policy = process.argv[2] || "adaptive";
 const scenario = process.argv[3] || "frequency-vs-position";
 const policies = ["none", "frequency", "oracle", "adaptive", "all-seven"];
 const scenarios = ["frequency-vs-position", "phase-shift"];
-if (!policies.includes(policy)) throw new Error(`unknown v0.22 policy: ${policy}`);
-if (!scenarios.includes(scenario)) throw new Error(`unknown v0.22 scenario: ${scenario}`);
+if (!policies.includes(policy)) throw new Error(`unknown v0.23 policy: ${policy}`);
+if (!scenarios.includes(scenario)) throw new Error(`unknown v0.23 scenario: ${scenario}`);
 
 const fileCount = 2500;
 const checkpointBudgetBytes = 20_000;
@@ -29,7 +29,7 @@ function importPatch(state, fileId, fromTarget, toTarget) {
   if (!file) throw new Error(`missing file: ${fileId}`);
   const needle = `file-${fromTarget}.js`;
   const replacement = `file-${toTarget}.js`;
-  if (needle.length !== replacement.length) throw new Error("v0.22 import toggle must be same width");
+  if (needle.length !== replacement.length) throw new Error("v0.23 import toggle must be same width");
   if (!file.content.includes(needle)) throw new Error(`file ${fileId} missing ${needle}`);
   return { content: file.content.replace(needle, replacement) };
 }
@@ -90,10 +90,19 @@ let totalStateFingerprintCharactersRehashed = 0;
 let checkpointBuildCanonicalCharacters = 0;
 let checkpointBytesBuilt = 0;
 let checkpointBytesEvicted = 0;
+let checkpointBytesRetainedAcrossMigrations = 0;
 let reconfigurationCount = 0;
 let maxPersistentDomainCheckpointBytes = 0;
 const selectionTimeline = [];
 let governor = null;
+
+function chargeMigration(metrics) {
+  checkpointBuildCanonicalCharacters += metrics.buildCanonicalCharacters;
+  checkpointBytesBuilt += metrics.bytesBuilt;
+  checkpointBytesEvicted += metrics.bytesEvicted;
+  checkpointBytesRetainedAcrossMigrations += metrics.bytesRetained;
+  reconfigurationCount += 1;
+}
 
 if (policy === "adaptive") {
   governor = new AdaptiveTruthCheckpointGovernor({
@@ -113,16 +122,12 @@ if (policy !== "adaptive") {
   if (initialDomains.length) {
     const replacement = replaceDomainCheckpointSelection(tracked, initialDomains);
     tracked = replacement.tracked;
-    checkpointBuildCanonicalCharacters += replacement.metrics.buildCanonicalCharacters;
-    checkpointBytesBuilt += replacement.metrics.bytesBuilt;
-    checkpointBytesEvicted += replacement.metrics.bytesEvicted;
-    reconfigurationCount += 1;
+    chargeMigration(replacement.metrics);
     maxPersistentDomainCheckpointBytes = mergePeak(maxPersistentDomainCheckpointBytes, tracked.domainHashCheckpoints.checkpointBytes);
     selectionTimeline.push({ step: 0, reason: "initial-policy-selection", domains: [...tracked.domainHashCheckpoints.selectedDomains] });
   }
 }
 
-let previousPhase = null;
 for (let i = 0; i < operations.length; i += 1) {
   const operation = operations[i];
   if (policy === "oracle") {
@@ -131,10 +136,7 @@ for (let i = 0; i < operations.length; i += 1) {
     if (JSON.stringify(current) !== JSON.stringify(desired)) {
       const replacement = replaceDomainCheckpointSelection(tracked, desired);
       tracked = replacement.tracked;
-      checkpointBuildCanonicalCharacters += replacement.metrics.buildCanonicalCharacters;
-      checkpointBytesBuilt += replacement.metrics.bytesBuilt;
-      checkpointBytesEvicted += replacement.metrics.bytesEvicted;
-      reconfigurationCount += 1;
+      chargeMigration(replacement.metrics);
       selectionTimeline.push({ step: i + 1, reason: "oracle-phase-selection", domains: [...desired] });
     }
   }
@@ -144,7 +146,7 @@ for (let i = 0; i < operations.length; i += 1) {
     const outcome = governor.applyPointPatch({
       fileId: operation.fileId,
       patch,
-      evidence: { benchmark: "v0.22", policy, scenario, step: i + 1, phase: operation.phase },
+      evidence: { benchmark: "v0.23", policy, scenario, step: i + 1, phase: operation.phase },
     });
     tracked = outcome.tracked;
     if (JSON.stringify(outcome.decision.selectedBefore) !== JSON.stringify(outcome.decision.selectedAfter)) {
@@ -160,7 +162,7 @@ for (let i = 0; i < operations.length; i += 1) {
       tracked,
       fileId: operation.fileId,
       patch,
-      evidence: { benchmark: "v0.22", policy, scenario, step: i + 1, phase: operation.phase },
+      evidence: { benchmark: "v0.23", policy, scenario, step: i + 1, phase: operation.phase },
     });
   }
 
@@ -170,7 +172,6 @@ for (let i = 0; i < operations.length; i += 1) {
   totalDomainEntriesSkipped += mutation.domainAdvance.totalDomainEntriesSkipped;
   totalStateFingerprintCharactersRehashed += mutation.fingerprintAdvance.canonicalCharactersRehashed;
   maxPersistentDomainCheckpointBytes = mergePeak(maxPersistentDomainCheckpointBytes, tracked.domainHashCheckpoints.checkpointBytes);
-  previousPhase = operation.phase;
 }
 
 const wallMs = performance.now() - started;
@@ -180,6 +181,7 @@ if (policy === "adaptive") {
   checkpointBuildCanonicalCharacters = summary.totalCheckpointBuildCanonicalCharacters;
   checkpointBytesBuilt = summary.totalCheckpointBytesBuilt;
   checkpointBytesEvicted = summary.totalCheckpointBytesEvicted;
+  checkpointBytesRetainedAcrossMigrations = summary.totalCheckpointBytesRetainedAcrossMigrations;
   reconfigurationCount = summary.reconfigurationCount;
   maxPersistentDomainCheckpointBytes = Math.max(maxPersistentDomainCheckpointBytes, summary.persistentCheckpointBytes);
 }
@@ -188,7 +190,7 @@ const finalDomainCheckpointBytes = tracked.domainHashCheckpoints.checkpointBytes
 const chargedDomainCanonicalWork = totalDomainCanonicalCharactersRehashed + checkpointBuildCanonicalCharacters;
 
 console.log(JSON.stringify({
-  schema: "axm.ignition-adaptive-truth-checkpoint-probe/v0.22",
+  schema: "axm.ignition-adaptive-truth-checkpoint-probe/v0.23",
   policy,
   scenario,
   fileCount,
@@ -209,10 +211,12 @@ console.log(JSON.stringify({
   checkpointBuildCanonicalCharacters,
   checkpointBytesBuilt,
   checkpointBytesEvicted,
+  checkpointBytesRetainedAcrossMigrations,
   reconfigurationCount,
   chargedDomainCanonicalWork,
   selectionTimeline,
   adaptiveStats: policy === "adaptive" ? governor.summary().stats : null,
   overBudgetReference: policy === "all-seven",
-  timingBoundary: "Fresh Node process. Shared initial v0.20/no-domain-checkpoint workspace bootstrap is excluded. Timed region includes domain checkpoint construction/rebuilds plus all point-mutation truth advances. Independent external verification is performed by the aggregate benchmark, not inside this probe.",
+  timingBoundary: "Fresh Node process. Shared initial v0.20/no-domain-checkpoint workspace bootstrap is excluded. Timed region includes admitted checkpoint construction, retained-record migration, eviction, and all point-mutation truth advances. Independent external verification is performed by the aggregate benchmark, not inside this probe.",
+  residencyBoundary: "The checkpoint byte ceiling applies to the exact records retained by the current checkpoint set. Physical transient allocator peak during a migration is not measured by this probe.",
 }));
