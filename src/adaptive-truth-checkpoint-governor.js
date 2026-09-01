@@ -1,5 +1,4 @@
-import { canonicalStringCharacterLength } from "./canonical-size-hint.js";
-import { buildWorkspaceDomainHashCheckpoints } from "./checkpointed-domain-hashes.js";
+import { migrateWorkspaceDomainHashCheckpointSelection } from "./checkpointed-domain-hashes.js";
 import {
   applyDomainCheckpointedWorkspacePointPatch,
   bootstrapDomainCheckpointedWorkspaceTruth,
@@ -7,7 +6,7 @@ import {
 } from "./domain-checkpointed-workspace-truth.js";
 import { REALISTIC_DOMAINS } from "./realistic-mutations.js";
 
-export const ADAPTIVE_TRUTH_CHECKPOINT_GOVERNOR_SCHEMA = "axm.ignition-adaptive-truth-checkpoint-governor/v0.22";
+export const ADAPTIVE_TRUTH_CHECKPOINT_GOVERNOR_SCHEMA = "axm.ignition-adaptive-truth-checkpoint-governor/v0.23";
 
 function normalizeBudget(value) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error("checkpoint budget must be a non-negative integer");
@@ -31,48 +30,28 @@ function normalizeDomains(domains) {
   return REALISTIC_DOMAINS.filter((domain) => unique.includes(domain));
 }
 
-function buildCostCharacters(tracked, domains) {
-  return normalizeDomains(domains).reduce((sum, domain) => sum + canonicalStringCharacterLength({
-    domain,
-    fileCount: tracked.domainIndex.fileCount,
-    entries: tracked.domainIndex.entriesByDomain[domain],
-  }), 0);
-}
-
 export function replaceDomainCheckpointSelection(tracked, checkpointDomains) {
   if (!tracked || tracked.schema !== DOMAIN_CHECKPOINTED_WORKSPACE_TRUTH_SCHEMA) {
     throw new Error("checkpoint selection replacement requires domain-checkpointed workspace truth");
   }
   const selectedDomains = normalizeDomains(checkpointDomains);
-  const beforeDomains = [...tracked.domainHashCheckpoints.selectedDomains];
-  const beforeBytes = tracked.domainHashCheckpoints.checkpointBytes;
-  const buildCanonicalCharacters = buildCostCharacters(tracked, selectedDomains);
-  const domainHashCheckpoints = buildWorkspaceDomainHashCheckpoints(tracked.domainIndex, { domains: selectedDomains });
-  if (domainHashCheckpoints.stateHash !== tracked.stateHash) throw new Error("replacement checkpoint set changed state truth");
+  const migration = migrateWorkspaceDomainHashCheckpointSelection(
+    tracked.domainIndex,
+    tracked.domainHashCheckpoints,
+    { domains: selectedDomains },
+  );
+  if (migration.checkpointSet.stateHash !== tracked.stateHash) {
+    throw new Error("migrated checkpoint set changed state truth");
+  }
 
-  const afterBytes = domainHashCheckpoints.checkpointBytes;
-  const addedDomains = selectedDomains.filter((domain) => !beforeDomains.includes(domain));
-  const evictedDomains = beforeDomains.filter((domain) => !selectedDomains.includes(domain));
-  const retainedDomains = selectedDomains.filter((domain) => beforeDomains.includes(domain));
-  const nextTracked = Object.freeze({ ...tracked, domainHashCheckpoints });
+  const nextTracked = Object.freeze({ ...tracked, domainHashCheckpoints: migration.checkpointSet });
   return Object.freeze({
     tracked: nextTracked,
-    metrics: Object.freeze({
-      mode: "checkpoint-selection-rebuild",
-      beforeDomains: Object.freeze(beforeDomains),
-      afterDomains: Object.freeze([...selectedDomains]),
-      addedDomains: Object.freeze(addedDomains),
-      evictedDomains: Object.freeze(evictedDomains),
-      retainedDomains: Object.freeze(retainedDomains),
-      beforeBytes,
-      afterBytes,
-      bytesBuilt: afterBytes,
-      bytesEvicted: Math.max(0, beforeBytes - retainedDomains.length * tracked.domainIndex.fileCount * 4),
-      buildCanonicalCharacters,
-      rebuildsRetainedDomains: retainedDomains.length > 0,
-    }),
+    metrics: migration.metrics,
   });
 }
+
+export const migrateDomainCheckpointSelection = replaceDomainCheckpointSelection;
 
 function makeStats(windowSize) {
   return Object.fromEntries(REALISTIC_DOMAINS.map((domain) => [domain, {
@@ -88,6 +67,7 @@ function makeStats(windowSize) {
     buildCanonicalCharactersCharged: 0,
     checkpointBytesBuilt: 0,
     checkpointBytesEvicted: 0,
+    checkpointBytesRetainedAcrossMigrations: 0,
   }]));
 }
 
@@ -119,6 +99,7 @@ export class AdaptiveTruthCheckpointGovernor {
     this.totalCheckpointBuildCanonicalCharacters = 0;
     this.totalCheckpointBytesBuilt = 0;
     this.totalCheckpointBytesEvicted = 0;
+    this.totalCheckpointBytesRetainedAcrossMigrations = 0;
     this.reconfigurationCount = 0;
     this.#stats = makeStats(this.valueWindow);
     this.#decisionHistory = [];
@@ -199,18 +180,24 @@ export class AdaptiveTruthCheckpointGovernor {
     this.totalCheckpointBuildCanonicalCharacters += metrics.buildCanonicalCharacters;
     this.totalCheckpointBytesBuilt += metrics.bytesBuilt;
     this.totalCheckpointBytesEvicted += metrics.bytesEvicted;
-    for (const domain of metrics.afterDomains) {
+    this.totalCheckpointBytesRetainedAcrossMigrations += metrics.bytesRetained;
+
+    for (const domain of metrics.addedDomains) {
       const stat = this.#stats[domain];
+      const currentCost = metrics.buildCanonicalCharactersByDomain[domain];
+      if (!Number.isSafeInteger(currentCost) || currentCost < 0) {
+        throw new Error(`missing checkpoint build cost for admitted domain: ${domain}`);
+      }
       stat.buildCount += 1;
-      const currentCost = canonicalStringCharacterLength({
-        domain,
-        fileCount: this.tracked.domainIndex.fileCount,
-        entries: this.tracked.domainIndex.entriesByDomain[domain],
-      });
       stat.buildCanonicalCharactersCharged += currentCost;
       stat.checkpointBytesBuilt += this.bytesPerDomain;
     }
-    for (const domain of metrics.evictedDomains) this.#stats[domain].checkpointBytesEvicted += this.bytesPerDomain;
+    for (const domain of metrics.retainedDomains) {
+      this.#stats[domain].checkpointBytesRetainedAcrossMigrations += this.bytesPerDomain;
+    }
+    for (const domain of metrics.evictedDomains) {
+      this.#stats[domain].checkpointBytesEvicted += this.bytesPerDomain;
+    }
   }
 
   applyPointPatch({ fileId, patch, evidence = {} }) {
@@ -244,7 +231,7 @@ export class AdaptiveTruthCheckpointGovernor {
 
     this.generation += 1;
     const decision = Object.freeze({
-      schema: "axm.ignition-adaptive-truth-checkpoint-decision/v0.22",
+      schema: "axm.ignition-adaptive-truth-checkpoint-decision/v0.23",
       generation: this.generation,
       fileIndex: tracked.lastMutation.fileIndex,
       changedDomains: Object.freeze([...tracked.lastMutation.mutationReceipt.changedDomains]),
@@ -282,6 +269,7 @@ export class AdaptiveTruthCheckpointGovernor {
       totalCheckpointBuildCanonicalCharacters: this.totalCheckpointBuildCanonicalCharacters,
       totalCheckpointBytesBuilt: this.totalCheckpointBytesBuilt,
       totalCheckpointBytesEvicted: this.totalCheckpointBytesEvicted,
+      totalCheckpointBytesRetainedAcrossMigrations: this.totalCheckpointBytesRetainedAcrossMigrations,
       reconfigurationCount: this.reconfigurationCount,
       stats: this.stats(),
     });

@@ -172,6 +172,97 @@ export class WorkspaceDomainHashCheckpoints {
     return record.hash;
   }
 
+  sharesDomainCheckpointStorage(other, domain) {
+    if (!(other instanceof WorkspaceDomainHashCheckpoints)) return false;
+    const own = this.#records.get(domain);
+    const candidate = other.#records.get(domain);
+    return Boolean(own && candidate && own.checkpoints === candidate.checkpoints);
+  }
+
+  migrateSelection(index, { domains = [] } = {}) {
+    validateIndex(index);
+    if (this.stateHash !== index.identity.stateHash) throw new Error("domain checkpoint migration stateHash mismatch");
+    if (this.fileCount !== index.fileCount) throw new Error("domain checkpoint migration fileCount mismatch");
+
+    const selectedDomains = normalizedCheckpointDomains(domains);
+    const beforeDomains = [...this.selectedDomains];
+    const addedDomains = selectedDomains.filter((domain) => !this.#records.has(domain));
+    const evictedDomains = beforeDomains.filter((domain) => !selectedDomains.includes(domain));
+    const retainedDomains = selectedDomains.filter((domain) => this.#records.has(domain));
+    const nextRecords = new Map();
+    const buildCanonicalCharactersByDomain = {};
+
+    for (const domain of retainedDomains) {
+      const record = this.#records.get(domain);
+      if (record.hash !== index.identity.domains[domain].hash) {
+        throw new Error(`retained domain checkpoint hash mismatch: ${domain}`);
+      }
+      nextRecords.set(domain, record);
+    }
+
+    for (const domain of addedDomains) {
+      const record = buildDomainCheckpointRecord(domain, index.fileCount, index.entriesByDomain[domain]);
+      if (record.hash !== index.identity.domains[domain].hash) {
+        throw new Error(`domain checkpoint migration bootstrap hash mismatch: ${domain}`);
+      }
+      nextRecords.set(domain, record);
+      buildCanonicalCharactersByDomain[domain] = record.canonicalCharactersHashed;
+    }
+
+    const bytesPerDomain = index.fileCount * 4;
+    const beforeBytes = this.checkpointBytes;
+    const afterBytes = selectedDomains.length * bytesPerDomain;
+    const bytesBuilt = addedDomains.length * bytesPerDomain;
+    const bytesEvicted = evictedDomains.length * bytesPerDomain;
+    const bytesRetained = retainedDomains.length * bytesPerDomain;
+    const buildCanonicalCharacters = Object.values(buildCanonicalCharactersByDomain).reduce((sum, value) => sum + value, 0);
+    const checkpointSet = new WorkspaceDomainHashCheckpoints({
+      stateHash: index.identity.stateHash,
+      fileCount: index.fileCount,
+      selectedDomains,
+      records: nextRecords,
+      generation: this.generation,
+      lastAdvance: {
+        mode: "retained-domain-checkpoint-migration",
+        beforeDomains: Object.freeze(beforeDomains),
+        afterDomains: Object.freeze([...selectedDomains]),
+        addedDomains: Object.freeze(addedDomains),
+        evictedDomains: Object.freeze(evictedDomains),
+        retainedDomains: Object.freeze(retainedDomains),
+        beforeBytes,
+        afterBytes,
+        bytesBuilt,
+        bytesEvicted,
+        bytesRetained,
+      },
+    });
+    const retainedCheckpointArraysReused = retainedDomains.every(
+      (domain) => checkpointSet.sharesDomainCheckpointStorage(this, domain),
+    );
+    if (!retainedCheckpointArraysReused) throw new Error("retained domain checkpoint storage was rebuilt");
+
+    return Object.freeze({
+      checkpointSet,
+      metrics: Object.freeze({
+        mode: "checkpoint-selection-migration",
+        beforeDomains: Object.freeze(beforeDomains),
+        afterDomains: Object.freeze([...selectedDomains]),
+        addedDomains: Object.freeze(addedDomains),
+        evictedDomains: Object.freeze(evictedDomains),
+        retainedDomains: Object.freeze(retainedDomains),
+        beforeBytes,
+        afterBytes,
+        bytesBuilt,
+        bytesEvicted,
+        bytesRetained,
+        buildCanonicalCharacters,
+        buildCanonicalCharactersByDomain: Object.freeze({ ...buildCanonicalCharactersByDomain }),
+        rebuildsRetainedDomains: false,
+        retainedCheckpointArraysReused,
+      }),
+    });
+  }
+
   advanceChangedDomains({ changedDomains, nextEntriesByDomain, fileIndex, toStateHash }) {
     if (typeof toStateHash !== "string" || !toStateHash) throw new Error("domain checkpoint advance requires toStateHash");
     const changed = [...new Set(changedDomains || [])];
@@ -246,6 +337,14 @@ export function buildWorkspaceDomainHashCheckpoints(index, { domains = [] } = {}
       checkpointBytes: selectedDomains.length * index.fileCount * 4,
     },
   });
+}
+
+export function migrateWorkspaceDomainHashCheckpointSelection(index, checkpointSet, { domains = [] } = {}) {
+  validateIndex(index);
+  if (!(checkpointSet instanceof WorkspaceDomainHashCheckpoints)) {
+    throw new Error("domain checkpoint migration requires checkpoint set");
+  }
+  return checkpointSet.migrateSelection(index, { domains });
 }
 
 export function applyWorkspacePointMutationWithDomainCheckpoints({ index, checkpointSet, mutationReceipt, nextState }) {
