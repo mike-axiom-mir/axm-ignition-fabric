@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { IgnitionSession } from "../src/ignition-session.js";
+import { hashValue } from "../src/ignition-core.js";
 import { runDirectRealisticBaseline } from "../src/direct-realistic-baseline.js";
+import { createTransitionReceipt, validateTransitionReceipt } from "../src/scoped-invalidation.js";
 import { buildRealisticRegistry, buildWorkspaceState, realisticRequests } from "../src/realistic-workload.js";
 import {
   changeWorkspaceImportTarget,
@@ -18,6 +20,36 @@ async function warmReport(state) {
   assert.equal(run.receipt.cacheCapabilityIds.length, 7);
   return session;
 }
+
+function selfConsistentReceipt({ fromStateHash = "from", toStateHash = "to", changedDomains }) {
+  const body = {
+    schema: "axm.ignition-transition/v0.06",
+    fromStateHash,
+    toStateHash,
+    changedDomains,
+    evidence: { test: "malformed-transition-receipt" },
+  };
+  return { ...body, receiptHash: hashValue(body) };
+}
+
+test("transition receipt validation rejects self-consistent noncanonical domain claims", () => {
+  const invalidDomainLists = [
+    [],
+    ["metadata", "metadata"],
+    ["metadata", "content-hash"],
+    [""],
+  ];
+  for (const changedDomains of invalidDomainLists) {
+    assert.throws(
+      () => validateTransitionReceipt(selfConsistentReceipt({ changedDomains })),
+      /changedDomains/,
+    );
+  }
+  assert.throws(
+    () => createTransitionReceipt({ fromStateHash: "from", toStateHash: "to", changedDomains: "metadata" }),
+    /non-empty array/,
+  );
+});
 
 test("path-only workspace change maps to metadata domain only", () => {
   const before = buildWorkspaceState({ fileCount: 500 });
@@ -117,5 +149,28 @@ test("transition receipt cannot be applied to the wrong canonical base", async (
     assert.equal(session.cachedCapabilityIds.length, 7);
   } finally {
     await session.close({ state: other });
+  }
+});
+
+test("transition receipt cannot claim a different target state", async () => {
+  const before = buildWorkspaceState({ fileCount: 300 });
+  const declaredAfter = changeWorkspacePath(before, 17, ".renamed");
+  const actualAfter = changeWorkspaceImportTarget(before, 217, 218, 219);
+  const transition = createWorkspaceTransitionReceipt(before, declaredAfter);
+  const session = await warmReport(before);
+  const cachedBefore = session.cachedCapabilityIds;
+  try {
+    await assert.rejects(
+      session.applyTransition({
+        transitionReceipt: transition,
+        invalidatedCapabilityIds: ["workspace-metadata-index"],
+        state: actualAfter,
+      }),
+      /toStateHash mismatch/,
+    );
+    assert.deepEqual(session.cachedCapabilityIds, cachedBefore);
+    assert.notEqual(transition.toStateHash, hashValue(actualAfter));
+  } finally {
+    await session.close({ state: before });
   }
 });
