@@ -1,0 +1,47 @@
+{
+  "schema": "axm.public-capability-registry-receipt/v1",
+  "repository": "mike-axiom-mir/axm-ignition-fabric",
+  "registry": {
+    "path": "registry/capabilities.jsonl",
+    "bytes": 903,
+    "sha256": "c7d8dd955eb51763ad6d070f8eb26ead6566215ec99415370426afa53e3c2396",
+    "capability_count": 1,
+    "capability_ids": [
+      "axm.ignition.materialization-core"
+    ]
+  },
+  "sources": [
+    {
+      "path": "package.json",
+      "bytes": 3201,
+      "git_blob_sha1": "98dc25e33bf0f806e638f8696fae5c14cb27a751"
+    },
+    {
+      "path": "src/capability.js",
+      "bytes": 456,
+      "git_blob_sha1": "305b1dd67acb8ddffd1522802018664c8a76b9a6"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 11353,
+      "git_blob_sha1": "65ed171955b30c070809e9164d4e22d224e0437e"
+    }
+  ],
+  "compatibility": {
+    "consumer": "mike-axiom-mir/axm-discovery-buddy",
+    "pinned_ref": "1a94fc2481d1cfc9234dea7c86af4777126d3924",
+    "marker_contract": "axm.discovery-public/v1",
+    "registry_contract": "registry/*capabilit*.jsonl"
+  },
+  "truth_boundary": {
+    "source_backed": true,
+    "public_export_intent": true,
+    "runtime_proof": false,
+    "execution_authority": false,
+    "automatic_selection_authority": false,
+    "automatic_install_authority": false,
+    "merge_authority": false,
+    "canon_authority": false
+  },
+  "receipt_sha256": "6a7af53e769e6b0998dc884734355f7780aad7037ac785d74c4ade5286065b35"
+}
