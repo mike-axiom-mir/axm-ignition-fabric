@@ -1,5 +1,9 @@
 # AXM Ignition Fabric
 
+The deterministic core is available to other local Node projects through a
+bounded package interface. See [CONSUMER.md](CONSUMER.md) for offline tarball,
+library, and installed-command usage. No registry release is published.
+
 Experimental AXM research branch for testing whether a software body can keep large capability/state possibility dormant, materialize only the workset required by the current event, execute within explicit resource bounds, merge the result deterministically back into persistent truth, and release or retain work according to grounded reuse/resource conditions.
 
 ## v0.07 research question

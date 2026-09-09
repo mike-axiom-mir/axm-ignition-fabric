@@ -3,6 +3,55 @@
   "version": "0.0.23",
   "private": true,
   "type": "module",
+  "description": "Deterministic bounded capability materialization and state-bound session runtime.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mike-axiom-mir/axm-ignition-fabric.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "axm-ignition": "./scripts/package-cli.mjs"
+  },
+  "files": [
+    "src",
+    "scripts/package-cli.mjs",
+    "scripts/run-demo.mjs",
+    "CONSUMER.md",
+    "LICENSE"
+  ],
+  "axmCapability": {
+    "schema": "axm.capability/v1",
+    "id": "axm.ignition.materialization-core",
+    "version": "0.6.0",
+    "status": "EXPERIMENTAL",
+    "runtime": {
+      "kind": "node",
+      "minimumVersion": "18",
+      "networkRequired": false,
+      "dependencies": []
+    },
+    "entrypoints": {
+      "library": ".",
+      "command": "axm-ignition",
+      "discoveryCommand": "axm-ignition describe",
+      "demoCommand": "axm-ignition demo"
+    },
+    "contracts": {
+      "runReceipt": "axm.ignition-run/v0.05",
+      "sessionReceipt": "axm.ignition-session-run/v0.06",
+      "transitionReceipt": "axm.ignition-transition/v0.06"
+    },
+    "authority": {
+      "canonical": false,
+      "automaticMerge": false
+    }
+  },
   "scripts": {
     "test": "node --test",
     "demo": "node scripts/run-demo.mjs",
