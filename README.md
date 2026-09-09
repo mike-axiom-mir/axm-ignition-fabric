@@ -133,6 +133,8 @@ Safety rules:
 
 - unknown binding -> invalidate by default;
 - wrong transition base -> reject receipt;
+- malformed, empty, duplicate or unsorted changed-domain claims -> reject receipt;
+- when target state is supplied, its canonical hash must equal the receipt target;
 - canonical state changed without a trusted transition receipt -> full cache invalidation;
 - scoped invalidation never changes canonical output expectations.
 
