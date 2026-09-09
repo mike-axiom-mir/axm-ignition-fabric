@@ -66,7 +66,8 @@ export class IgnitionSession {
   async applyTransition({ transitionReceipt, invalidatedCapabilityIds = [], state = null }) {
     if (this.closed) throw new Error("IgnitionSession is closed");
     if (this.stateHash === null) throw new Error("cannot apply transition before session has a canonical state");
-    validateTransitionReceipt(transitionReceipt, { expectedFrom: this.stateHash });
+    const expectedTo = state === null ? undefined : hashValue(state);
+    validateTransitionReceipt(transitionReceipt, { expectedFrom: this.stateHash, expectedTo });
     const requested = [...new Set(invalidatedCapabilityIds)].sort();
     const entries = requested.filter((id) => this.cache.has(id)).map((id) => [id, this.cache.get(id)]);
     const released = await this.#releaseEntries(entries, { state });
