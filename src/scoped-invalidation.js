@@ -1,11 +1,19 @@
 import { hashValue } from "./ignition-core.js";
 
+function normalizeChangedDomains(changedDomains) {
+  if (!Array.isArray(changedDomains) || !changedDomains.length) {
+    throw new Error("changedDomains must be a non-empty array");
+  }
+  if (changedDomains.some((domain) => typeof domain !== "string" || !domain.trim())) {
+    throw new Error("changedDomains must contain non-empty strings");
+  }
+  return [...new Set(changedDomains)].sort();
+}
+
 export function createTransitionReceipt({ fromStateHash, toStateHash, changedDomains, evidence = {} }) {
   if (typeof fromStateHash !== "string" || !fromStateHash) throw new Error("fromStateHash is required");
   if (typeof toStateHash !== "string" || !toStateHash) throw new Error("toStateHash is required");
-  const domains = [...new Set(changedDomains || [])].sort();
-  if (!domains.length) throw new Error("changedDomains must not be empty");
-  if (domains.some((domain) => typeof domain !== "string" || !domain)) throw new Error("changedDomains must be strings");
+  const domains = normalizeChangedDomains(changedDomains);
 
   const body = {
     schema: "axm.ignition-transition/v0.06",
@@ -19,11 +27,20 @@ export function createTransitionReceipt({ fromStateHash, toStateHash, changedDom
 
 export function validateTransitionReceipt(receipt, { expectedFrom, expectedTo } = {}) {
   if (!receipt || receipt.schema !== "axm.ignition-transition/v0.06") throw new Error("invalid transition receipt schema");
+  if (typeof receipt.fromStateHash !== "string" || !receipt.fromStateHash) throw new Error("transition fromStateHash is required");
+  if (typeof receipt.toStateHash !== "string" || !receipt.toStateHash) throw new Error("transition toStateHash is required");
+  const domains = normalizeChangedDomains(receipt.changedDomains);
+  if (
+    domains.length !== receipt.changedDomains.length
+    || domains.some((domain, index) => domain !== receipt.changedDomains[index])
+  ) {
+    throw new Error("transition changedDomains must be sorted and unique");
+  }
   const body = {
     schema: receipt.schema,
     fromStateHash: receipt.fromStateHash,
     toStateHash: receipt.toStateHash,
-    changedDomains: [...receipt.changedDomains],
+    changedDomains: domains,
     evidence: structuredClone(receipt.evidence),
   };
   if (hashValue(body) !== receipt.receiptHash) throw new Error("transition receipt hash mismatch");
