@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+
+import { stableStringify } from "./canonical-fingerprint-primitives.js";
 import { migrateWorkspaceDomainHashCheckpointSelection } from "./checkpointed-domain-hashes.js";
 import {
   applyDomainCheckpointedWorkspacePointPatch,
@@ -7,6 +10,30 @@ import {
 import { REALISTIC_DOMAINS } from "./realistic-mutations.js";
 
 export const ADAPTIVE_TRUTH_CHECKPOINT_GOVERNOR_SCHEMA = "axm.ignition-adaptive-truth-checkpoint-governor/v0.23";
+export const ADAPTIVE_TRUTH_CHECKPOINT_CONTINUATION_SCHEMA = "axm.ignition-adaptive-truth-checkpoint-continuation/v1";
+
+const CONTINUATION_COUNTER_FIELDS = Object.freeze([
+  "generation",
+  "totalDomainCanonicalCharactersRehashed",
+  "totalCheckpointBuildCanonicalCharacters",
+  "totalCheckpointBytesBuilt",
+  "totalCheckpointBytesEvicted",
+  "totalCheckpointBytesRetainedAcrossMigrations",
+  "reconfigurationCount",
+]);
+
+const STAT_COUNTER_FIELDS = Object.freeze([
+  "mutationCount",
+  "totalOpportunityCharacters",
+  "totalActualCharactersSaved",
+  "checkpointHitCount",
+  "fallbackCount",
+  "buildCount",
+  "buildCanonicalCharactersCharged",
+  "checkpointBytesBuilt",
+  "checkpointBytesEvicted",
+  "checkpointBytesRetainedAcrossMigrations",
+]);
 
 function normalizeBudget(value) {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error("checkpoint budget must be a non-negative integer");
@@ -28,6 +55,143 @@ function normalizeDomains(domains) {
     if (!REALISTIC_DOMAINS.includes(domain)) throw new Error(`unknown checkpoint domain: ${domain}`);
   }
   return REALISTIC_DOMAINS.filter((domain) => unique.includes(domain));
+}
+
+function assertPlainObject(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) throw new Error(`${label} must be a plain object`);
+}
+
+function assertNonNegativeInteger(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} must be a non-negative integer`);
+}
+
+function continuationDigest(payload) {
+  return createHash("sha256").update(stableStringify(payload)).digest("hex");
+}
+
+function cloneStatsForContinuation(stats) {
+  return Object.fromEntries(REALISTIC_DOMAINS.map((domain) => {
+    const value = stats[domain];
+    return [domain, {
+      domain,
+      mutationCount: value.mutationCount,
+      lastFullCanonicalCharacters: value.lastFullCanonicalCharacters,
+      recentOpportunityCharacters: [...value.recentOpportunityCharacters],
+      totalOpportunityCharacters: value.totalOpportunityCharacters,
+      totalActualCharactersSaved: value.totalActualCharactersSaved,
+      checkpointHitCount: value.checkpointHitCount,
+      fallbackCount: value.fallbackCount,
+      buildCount: value.buildCount,
+      buildCanonicalCharactersCharged: value.buildCanonicalCharactersCharged,
+      checkpointBytesBuilt: value.checkpointBytesBuilt,
+      checkpointBytesEvicted: value.checkpointBytesEvicted,
+      checkpointBytesRetainedAcrossMigrations: value.checkpointBytesRetainedAcrossMigrations,
+    }];
+  }));
+}
+
+function freezeContinuationStats(stats) {
+  return Object.freeze(Object.fromEntries(REALISTIC_DOMAINS.map((domain) => [
+    domain,
+    Object.freeze({
+      ...stats[domain],
+      recentOpportunityCharacters: Object.freeze([...stats[domain].recentOpportunityCharacters]),
+    }),
+  ])));
+}
+
+function validateContinuationStats(stats, valueWindow) {
+  assertPlainObject(stats, "adaptive continuation stats");
+  const keys = Object.keys(stats).sort();
+  const expectedKeys = [...REALISTIC_DOMAINS].sort();
+  if (!sameDomains(keys, expectedKeys)) throw new Error("adaptive continuation stats must contain exactly the known domains");
+
+  const normalized = {};
+  for (const domain of REALISTIC_DOMAINS) {
+    const value = stats[domain];
+    assertPlainObject(value, `adaptive continuation stat ${domain}`);
+    if (value.domain !== domain) throw new Error(`adaptive continuation stat domain mismatch: ${domain}`);
+    if (!Array.isArray(value.recentOpportunityCharacters) || value.recentOpportunityCharacters.length !== valueWindow) {
+      throw new Error(`adaptive continuation recent window mismatch: ${domain}`);
+    }
+    for (const [index, item] of value.recentOpportunityCharacters.entries()) {
+      assertNonNegativeInteger(item, `adaptive continuation recent opportunity ${domain}[${index}]`);
+    }
+    if (value.lastFullCanonicalCharacters !== null) {
+      assertNonNegativeInteger(value.lastFullCanonicalCharacters, `adaptive continuation last full replay ${domain}`);
+    }
+    for (const field of STAT_COUNTER_FIELDS) {
+      assertNonNegativeInteger(value[field], `adaptive continuation ${domain}.${field}`);
+    }
+    normalized[domain] = {
+      domain,
+      mutationCount: value.mutationCount,
+      lastFullCanonicalCharacters: value.lastFullCanonicalCharacters,
+      recentOpportunityCharacters: [...value.recentOpportunityCharacters],
+      totalOpportunityCharacters: value.totalOpportunityCharacters,
+      totalActualCharactersSaved: value.totalActualCharactersSaved,
+      checkpointHitCount: value.checkpointHitCount,
+      fallbackCount: value.fallbackCount,
+      buildCount: value.buildCount,
+      buildCanonicalCharactersCharged: value.buildCanonicalCharactersCharged,
+      checkpointBytesBuilt: value.checkpointBytesBuilt,
+      checkpointBytesEvicted: value.checkpointBytesEvicted,
+      checkpointBytesRetainedAcrossMigrations: value.checkpointBytesRetainedAcrossMigrations,
+    };
+  }
+  return normalized;
+}
+
+function validateContinuationEnvelope(continuation) {
+  assertPlainObject(continuation, "adaptive checkpoint continuation");
+  if (continuation.schema !== ADAPTIVE_TRUTH_CHECKPOINT_CONTINUATION_SCHEMA) {
+    throw new Error("unsupported adaptive checkpoint continuation schema");
+  }
+  if (continuation.governorSchema !== ADAPTIVE_TRUTH_CHECKPOINT_GOVERNOR_SCHEMA) {
+    throw new Error("adaptive checkpoint continuation governor schema mismatch");
+  }
+  if (typeof continuation.continuationSha256 !== "string" || !/^[0-9a-f]{64}$/.test(continuation.continuationSha256)) {
+    throw new Error("adaptive checkpoint continuation requires SHA-256 identity");
+  }
+
+  const { continuationSha256, ...payload } = continuation;
+  if (continuationDigest(payload) !== continuationSha256) {
+    throw new Error("adaptive checkpoint continuation SHA-256 mismatch");
+  }
+
+  if (typeof payload.stateHash !== "string" || !payload.stateHash) {
+    throw new Error("adaptive checkpoint continuation requires stateHash");
+  }
+  assertNonNegativeInteger(payload.canonicalCharacters, "adaptive checkpoint continuation canonicalCharacters");
+  const maxCheckpointBytes = normalizeBudget(payload.maxCheckpointBytes);
+  const valueWindow = normalizeWindow(payload.valueWindow);
+  assertNonNegativeInteger(payload.bytesPerDomain, "adaptive checkpoint continuation bytesPerDomain");
+  assertNonNegativeInteger(payload.maxDomains, "adaptive checkpoint continuation maxDomains");
+  for (const field of CONTINUATION_COUNTER_FIELDS) {
+    assertNonNegativeInteger(payload[field], `adaptive checkpoint continuation ${field}`);
+  }
+
+  if (!Array.isArray(payload.selectedDomains)) throw new Error("adaptive checkpoint continuation selectedDomains must be an array");
+  const selectedDomains = normalizeDomains(payload.selectedDomains);
+  if (!sameDomains(selectedDomains, payload.selectedDomains) || new Set(payload.selectedDomains).size !== payload.selectedDomains.length) {
+    throw new Error("adaptive checkpoint continuation selectedDomains must be canonical, sorted and unique");
+  }
+  const expectedMaxDomains = payload.bytesPerDomain === 0 ? 0 : Math.floor(maxCheckpointBytes / payload.bytesPerDomain);
+  if (payload.maxDomains !== expectedMaxDomains) throw new Error("adaptive checkpoint continuation maxDomains mismatch");
+  if (selectedDomains.length > payload.maxDomains) throw new Error("adaptive checkpoint continuation exceeds checkpoint-domain budget");
+  if (selectedDomains.length * payload.bytesPerDomain > maxCheckpointBytes) {
+    throw new Error("adaptive checkpoint continuation exceeds checkpoint byte budget");
+  }
+
+  return {
+    ...payload,
+    maxCheckpointBytes,
+    valueWindow,
+    selectedDomains,
+    stats: validateContinuationStats(payload.stats, valueWindow),
+  };
 }
 
 export function replaceDomainCheckpointSelection(tracked, checkpointDomains) {
@@ -85,6 +249,7 @@ function freezeStats(stats) {
 export class AdaptiveTruthCheckpointGovernor {
   #stats;
   #decisionHistory;
+  #resumeReceipt;
 
   constructor({ state, maxCheckpointBytes = 20_000, valueWindow = 4 } = {}) {
     if (!state || !Array.isArray(state.files)) throw new Error("adaptive checkpoint governor requires workspace state");
@@ -103,6 +268,96 @@ export class AdaptiveTruthCheckpointGovernor {
     this.reconfigurationCount = 0;
     this.#stats = makeStats(this.valueWindow);
     this.#decisionHistory = [];
+    this.#resumeReceipt = null;
+  }
+
+  static restore({ state, continuation } = {}) {
+    if (!state || !Array.isArray(state.files)) throw new Error("adaptive checkpoint restore requires workspace state");
+    const payload = validateContinuationEnvelope(continuation);
+    const governor = new AdaptiveTruthCheckpointGovernor({
+      state,
+      maxCheckpointBytes: payload.maxCheckpointBytes,
+      valueWindow: payload.valueWindow,
+    });
+
+    if (governor.tracked.stateHash !== payload.stateHash) {
+      throw new Error("adaptive checkpoint continuation does not match canonical state");
+    }
+    if (governor.tracked.canonicalSizeHint.canonicalCharacters !== payload.canonicalCharacters) {
+      throw new Error("adaptive checkpoint continuation canonical size mismatch");
+    }
+    if (governor.bytesPerDomain !== payload.bytesPerDomain || governor.maxDomains !== payload.maxDomains) {
+      throw new Error("adaptive checkpoint continuation workspace shape mismatch");
+    }
+
+    const restoredSelection = replaceDomainCheckpointSelection(governor.tracked, payload.selectedDomains);
+    governor.tracked = restoredSelection.tracked;
+    governor.generation = payload.generation;
+    governor.totalDomainCanonicalCharactersRehashed = payload.totalDomainCanonicalCharactersRehashed;
+    governor.totalCheckpointBuildCanonicalCharacters = payload.totalCheckpointBuildCanonicalCharacters;
+    governor.totalCheckpointBytesBuilt = payload.totalCheckpointBytesBuilt;
+    governor.totalCheckpointBytesEvicted = payload.totalCheckpointBytesEvicted;
+    governor.totalCheckpointBytesRetainedAcrossMigrations = payload.totalCheckpointBytesRetainedAcrossMigrations;
+    governor.reconfigurationCount = payload.reconfigurationCount;
+    governor.#stats = payload.stats;
+    governor.#decisionHistory = [];
+
+    governor.totalCheckpointBuildCanonicalCharacters += restoredSelection.metrics.buildCanonicalCharacters;
+    governor.totalCheckpointBytesBuilt += restoredSelection.metrics.bytesBuilt;
+    for (const domain of restoredSelection.metrics.addedDomains) {
+      const currentCost = restoredSelection.metrics.buildCanonicalCharactersByDomain[domain];
+      if (!Number.isSafeInteger(currentCost) || currentCost < 0) {
+        throw new Error(`missing checkpoint restore build cost for domain: ${domain}`);
+      }
+      const stat = governor.#stats[domain];
+      stat.buildCount += 1;
+      stat.buildCanonicalCharactersCharged += currentCost;
+      stat.checkpointBytesBuilt += governor.bytesPerDomain;
+    }
+
+    governor.#resumeReceipt = Object.freeze({
+      schema: "axm.ignition-adaptive-truth-checkpoint-resume/v1",
+      continuationSha256: continuation.continuationSha256,
+      generation: governor.generation,
+      stateHash: governor.tracked.stateHash,
+      selectedDomains: Object.freeze([...governor.tracked.domainHashCheckpoints.selectedDomains]),
+      checkpointBytesRebuilt: restoredSelection.metrics.bytesBuilt,
+      checkpointBuildCanonicalCharacters: restoredSelection.metrics.buildCanonicalCharacters,
+      priorDecisionHistoryRetained: false,
+    });
+    return governor;
+  }
+
+  checkpoint() {
+    const payload = {
+      schema: ADAPTIVE_TRUTH_CHECKPOINT_CONTINUATION_SCHEMA,
+      governorSchema: this.schema,
+      stateHash: this.tracked.stateHash,
+      canonicalCharacters: this.tracked.canonicalSizeHint.canonicalCharacters,
+      maxCheckpointBytes: this.maxCheckpointBytes,
+      valueWindow: this.valueWindow,
+      bytesPerDomain: this.bytesPerDomain,
+      maxDomains: this.maxDomains,
+      generation: this.generation,
+      selectedDomains: [...this.tracked.domainHashCheckpoints.selectedDomains],
+      totalDomainCanonicalCharactersRehashed: this.totalDomainCanonicalCharactersRehashed,
+      totalCheckpointBuildCanonicalCharacters: this.totalCheckpointBuildCanonicalCharacters,
+      totalCheckpointBytesBuilt: this.totalCheckpointBytesBuilt,
+      totalCheckpointBytesEvicted: this.totalCheckpointBytesEvicted,
+      totalCheckpointBytesRetainedAcrossMigrations: this.totalCheckpointBytesRetainedAcrossMigrations,
+      reconfigurationCount: this.reconfigurationCount,
+      stats: cloneStatsForContinuation(this.#stats),
+    };
+    return Object.freeze({
+      ...payload,
+      selectedDomains: Object.freeze([...payload.selectedDomains]),
+      stats: freezeContinuationStats(payload.stats),
+      continuationSha256: continuationDigest(payload),
+    });
+  }
+
+  resumeReceipt() {
+    return this.#resumeReceipt;
   }
 
   #advanceWindow() {
