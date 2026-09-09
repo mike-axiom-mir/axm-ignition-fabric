@@ -1,0 +1,93 @@
+name: Public capability discovery
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  generated-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["18", "22"]
+    steps:
+      - name: Checkout Ignition Fabric
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Verify generated registry is current
+        run: node tools/generate-public-capabilities.mjs --check
+      - name: Run focused discovery regressions
+        run: node --test tests/public-capability-discovery.test.mjs
+      - name: Verify real package descriptor
+        run: |
+          node scripts/package-cli.mjs describe > /tmp/ignition-describe.json
+          node --input-type=module - <<'NODE'
+          import fs from "node:fs";
+          const document = JSON.parse(fs.readFileSync("/tmp/ignition-describe.json", "utf8"));
+          if (document.command !== "describe") throw new Error("unexpected command receipt");
+          if (document.capability?.id !== "axm.ignition.materialization-core") throw new Error("capability id drift");
+          if (document.capability?.status !== "EXPERIMENTAL") throw new Error("status drift");
+          if (document.capability?.runtime?.networkRequired !== false) throw new Error("offline boundary drift");
+          if (document.capability?.authority?.canonical !== false) throw new Error("CANON authority drift");
+          if (document.capability?.authority?.automaticMerge !== false) throw new Error("merge authority drift");
+          NODE
+
+  discovery-buddy-bridge:
+    runs-on: ubuntu-latest
+    needs: generated-contract
+    steps:
+      - name: Checkout Ignition Fabric
+        uses: actions/checkout@v4
+      - name: Checkout pinned Discovery Buddy consumer
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/axm-discovery-buddy
+          ref: 1a94fc2481d1cfc9234dea7c86af4777126d3924
+          path: .ci/discovery-buddy
+          persist-credentials: false
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Generate and exact-verify public discovery index
+        env:
+          PYTHONPATH: ${{ github.workspace }}/.ci/discovery-buddy
+        run: |
+          python -m discovery_buddy scan . --public --output-dir /tmp/ignition-discovery
+          python -m discovery_buddy verify . --public --output-dir /tmp/ignition-discovery
+      - name: Prove the real bridge and public-safe boundary
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          index = json.loads(Path("/tmp/ignition-discovery/public-discovery.json").read_text("utf-8"))
+          assert index["schema"] == "axm.discovery-index/v0.1"
+          assert index["visibility"] == "PUBLIC_SAFE_DECLARED_ONLY"
+          assert index["summary"]["repositories"] == 1
+          assert index["summary"]["capability_records"] == 1
+          repo = index["repositories"][0]
+          assert repo["repo"] == "mike-axiom-mir/axm-ignition-fabric"
+          assert "path" not in repo and "git" not in repo
+          records = repo["capabilities"]["records"]
+          assert len(records) == 1
+          record = records[0]
+          assert record["id"] == "axm.ignition.materialization-core"
+          assert record["status"] == "EXPERIMENTAL"
+          assert record["providers"] == ["mike-axiom-mir/axm-ignition-fabric"]
+          assert record["consumers"] == []
+          assert record["source"] == "registry/capabilities.jsonl"
+          assert record["line"] == 1
+          sources = repo["capabilities"]["sources"]
+          assert len(sources) == 1 and sources[0]["records"] == 1 and sources[0]["errors"] == 0
+          raw = Path("registry/capabilities.jsonl").read_bytes()
+          assert sources[0]["sha256"] == hashlib.sha256(raw).hexdigest()
+          print("Ignition -> Discovery Buddy bridge: PASS")
+          PY
