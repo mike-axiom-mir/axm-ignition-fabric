@@ -63,7 +63,12 @@ test("local tarball exposes the bounded Ignition core to an offline consumer", (
   const described = JSON.parse(run(command, ["describe"], consumer).stdout);
   assert.equal(described.capability.contracts.transitionReceipt, "axm.ignition-transition/v0.06");
 
-  const demo = run(command, ["demo"], consumer);
+  const humanDemo = run(command, ["demo"], consumer);
+  assert.match(humanDemo.stdout, /5\/5 EXACT OUTPUT MATCHES/);
+  assert.match(humanDemo.stdout, /BOUNDARY/);
+  assert.match(humanDemo.stdout, /--json/);
+
+  const demo = run(command, ["demo", "--json"], consumer);
   const rows = demo.stdout.trim().split("\n").map((line) => JSON.parse(line));
   assert.equal(rows.length, 5);
   assert.equal(rows.every((row) => row.equivalent === true), true);

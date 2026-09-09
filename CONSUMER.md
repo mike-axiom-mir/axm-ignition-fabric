@@ -18,6 +18,16 @@ axm-ignition describe
 axm-ignition demo
 ```
 
+`demo` is human-readable by default: it shows exact-output status, the bodies
+materialized for each request, the demo allocation difference, the executed
+route, and the evidence boundary. Machine consumers can retain the original
+one-receipt-per-line contract:
+
+```bash
+axm-ignition demo --json
+axm-ignition demo --scenario heavy
+```
+
 Library consumers receive the deterministic capability registry, one-shot
 executor, persistent session, canonical hashing helpers, and the v0.06
 transition receipt/invalidation boundary:
