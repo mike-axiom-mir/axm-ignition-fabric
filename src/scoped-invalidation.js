@@ -50,9 +50,21 @@ export function validateTransitionReceipt(receipt, { expectedFrom, expectedTo } 
 }
 
 export function createDomainInvalidationResolver(domainBindings) {
+  const source = domainBindings ?? {};
+  if (typeof source !== "object" || Array.isArray(source)) {
+    throw new Error("domainBindings must be an object");
+  }
+
   const normalized = new Map();
-  for (const [capabilityId, domains] of Object.entries(domainBindings || {})) {
-    normalized.set(capabilityId, new Set(domains || []));
+  for (const [capabilityId, domains] of Object.entries(source)) {
+    if (!capabilityId.trim()) throw new Error("domain binding capability id must be non-empty");
+    if (!Array.isArray(domains)) {
+      throw new Error(`domain binding for ${capabilityId} must be an array`);
+    }
+    if (domains.some((domain) => typeof domain !== "string" || !domain.trim())) {
+      throw new Error(`domain binding for ${capabilityId} must contain non-empty strings`);
+    }
+    normalized.set(capabilityId, new Set(domains));
   }
 
   return ({ transitionReceipt, cachedCapabilityIds = [] }) => {
