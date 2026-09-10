@@ -4,6 +4,7 @@ import { CapabilityRegistry, hashValue } from "./ignition-core.js";
 import { createDomainInvalidationResolver, validateTransitionReceipt } from "./scoped-invalidation.js";
 
 const admittedOperationContext = new AsyncLocalStorage();
+const releaseHookContext = new AsyncLocalStorage();
 
 function dependencyClosure(registry, initial) {
   const selected = new Map(initial.map((capability) => [capability.id, capability]));
@@ -122,7 +123,12 @@ export class IgnitionSession {
     for (const [id, entry] of [...entries].reverse()) {
       const capability = this.registry.get(id);
       try {
-        if (capability?.release) await capability.release(Object.freeze({ request, state, mode: this.mode, runtime: entry.instance }));
+        if (capability?.release) {
+          await releaseHookContext.run(
+            { session: this },
+            () => capability.release(Object.freeze({ request, state, mode: this.mode, runtime: entry.instance })),
+          );
+        }
         releasedBytes += entry.allocatedBytes || 0;
         releasedCapabilityIds.push(id);
       } catch (error) {
@@ -174,6 +180,12 @@ export class IgnitionSession {
     const caller = admittedOperationContext.getStore();
     if (caller?.session === this && this.activeOperations.has(caller.settled)) {
       const error = new Error("IgnitionSession close() cannot be entered from work admitted by the same session");
+      error.code = "AXM_SESSION_REENTRANT_CLOSE";
+      throw error;
+    }
+    const releaseCaller = releaseHookContext.getStore();
+    if (releaseCaller?.session === this && this.#closeInFlight) {
+      const error = new Error("IgnitionSession close() cannot join terminal cleanup from a release hook owned by that close");
       error.code = "AXM_SESSION_REENTRANT_CLOSE";
       throw error;
     }
