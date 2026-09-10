@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { IgnitionSession } from "../src/ignition-session.js";
 import { hashValue } from "../src/ignition-core.js";
 import { runDirectRealisticBaseline } from "../src/direct-realistic-baseline.js";
+import { createTransitionReceipt, validateTransitionReceipt } from "../src/scoped-invalidation.js";
 import { buildRealisticRegistry, buildWorkspaceState, realisticRequests } from "../src/realistic-workload.js";
 import {
   REALISTIC_DOMAIN_BINDINGS,
