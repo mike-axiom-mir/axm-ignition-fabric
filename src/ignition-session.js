@@ -56,6 +56,8 @@ async function materialize(capability, context) {
 }
 
 export class IgnitionSession {
+  #closeInFlight = null;
+
   constructor({ registry, mode = "ignition", domainBindings = null }) {
     if (!(registry instanceof CapabilityRegistry)) throw new Error("registry must be CapabilityRegistry");
     if (!["ignition", "eager"].includes(mode)) throw new Error("mode must be ignition or eager");
@@ -132,24 +134,39 @@ export class IgnitionSession {
   }
   async releaseAll(context = {}) { const result = await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; return result; }
   async close(context = {}) {
-    if (this.closed) return;
     const caller = admittedOperationContext.getStore();
     if (caller?.session === this && this.activeOperations.has(caller.settled)) {
       const error = new Error("IgnitionSession close() cannot be entered from work admitted by the same session");
       error.code = "AXM_SESSION_REENTRANT_CLOSE";
       throw error;
     }
+    // Once terminal cleanup is in flight, every external close caller joins that exact
+    // lifecycle instead of treating `closed` as evidence that cleanup already finished.
+    if (this.#closeInFlight) return this.#closeInFlight;
+    if (this.closed) return;
+
     // A close request revokes admission immediately. Operations that crossed the
     // boundary before this assignment retain only enough authority to settle; terminal
     // cleanup waits for them so their runtime/state changes cannot land after close.
     this.closed = true;
+    const closeWork = (async () => {
+      try {
+        await this.#drainActiveOperations();
+        await this.releaseAll(context);
+      } finally {
+        // Cleanup failure is still evidence that close did not finish cleanly, but it
+        // must not revive the old canonical-session identity after authority was revoked.
+        this.stateHash = null;
+      }
+    })();
+    this.#closeInFlight = closeWork;
+
     try {
-      await this.#drainActiveOperations();
-      await this.releaseAll(context);
+      return await closeWork;
     } finally {
-      // Cleanup failure is still evidence that close did not finish cleanly, but it
-      // must not revive the old canonical-session identity after authority was revoked.
-      this.stateHash = null;
+      // In-flight callers share this outcome. After it settles, preserve the existing
+      // terminal idempotency contract: later close() calls do not replay cleanup/failure.
+      if (this.#closeInFlight === closeWork) this.#closeInFlight = null;
     }
   }
 
