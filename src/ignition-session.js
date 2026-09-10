@@ -63,10 +63,36 @@ export class IgnitionSession {
     this.cache = new Map();
     this.stateHash = null;
     this.closed = false;
+    this.activeOperations = new Set();
     this.invalidationResolver = domainBindings === null ? null : createDomainInvalidationResolver(domainBindings);
   }
   get cacheBytes() { let total = 0; for (const entry of this.cache.values()) total += entry.allocatedBytes; return total; }
   get cachedCapabilityIds() { return [...this.cache.keys()].sort(); }
+
+  #trackOperation(operation) {
+    if (this.closed) return Promise.reject(new Error("IgnitionSession is closed"));
+    let settle;
+    const settled = new Promise((resolve) => { settle = resolve; });
+    this.activeOperations.add(settled);
+
+    let result;
+    try {
+      result = operation();
+    } catch (error) {
+      this.activeOperations.delete(settled);
+      settle();
+      return Promise.reject(error);
+    }
+
+    return Promise.resolve(result).finally(() => {
+      if (this.activeOperations.delete(settled)) settle();
+    });
+  }
+
+  async #drainActiveOperations() {
+    const active = [...this.activeOperations];
+    if (active.length) await Promise.all(active);
+  }
 
   async #releaseEntries(entries, { request = null, state = null } = {}) {
     let releasedBytes = 0;
@@ -103,10 +129,12 @@ export class IgnitionSession {
   async releaseAll(context = {}) { const result = await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; return result; }
   async close(context = {}) {
     if (this.closed) return;
-    // A close request revokes this session's execution authority before any
-    // asynchronous release hook can yield control back to another caller.
+    // A close request revokes admission immediately. Operations that crossed the
+    // boundary before this assignment retain only enough authority to settle; terminal
+    // cleanup waits for them so their runtime/state changes cannot land after close.
     this.closed = true;
     try {
+      await this.#drainActiveOperations();
       await this.releaseAll(context);
     } finally {
       // Cleanup failure is still evidence that close did not finish cleanly, but it
@@ -115,8 +143,11 @@ export class IgnitionSession {
     }
   }
 
-  async applyTransition({ transitionReceipt, invalidatedCapabilityIds = null, state = null }) {
-    if (this.closed) throw new Error("IgnitionSession is closed");
+  async applyTransition(args) {
+    return this.#trackOperation(() => this.#applyTransitionAdmitted(args));
+  }
+
+  async #applyTransitionAdmitted({ transitionReceipt, invalidatedCapabilityIds = null, state = null }) {
     if (this.stateHash === null) throw new Error("cannot apply transition before session has a canonical state");
     const expectedTo = state === null ? undefined : hashValue(state);
     validateTransitionReceipt(transitionReceipt, { expectedFrom: this.stateHash, expectedTo });
@@ -162,8 +193,11 @@ export class IgnitionSession {
     };
   }
 
-  async run({ request, state = {}, stateFingerprint = null }) {
-    if (this.closed) throw new Error("IgnitionSession is closed");
+  async run(args) {
+    return this.#trackOperation(() => this.#runAdmitted(args));
+  }
+
+  async #runAdmitted({ request, state = {}, stateFingerprint = null }) {
     if (stateFingerprint !== null && typeof stateFingerprint !== "string") throw new Error("stateFingerprint must be a string or null");
     const nextStateHash = stateFingerprint ?? hashValue(state);
     let fallbackInvalidation = null;
