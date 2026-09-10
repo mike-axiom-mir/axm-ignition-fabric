@@ -71,12 +71,32 @@ export class IgnitionSession {
   async #releaseEntries(entries, { request = null, state = null } = {}) {
     let releasedBytes = 0;
     const releasedCapabilityIds = [];
+    const failedCapabilityIds = [];
+    const evictedCapabilityIds = [];
+    const failures = [];
     for (const [id, entry] of [...entries].reverse()) {
       const capability = this.registry.get(id);
-      if (capability?.release) await capability.release(Object.freeze({ request, state, mode: this.mode, runtime: entry.instance }));
-      releasedBytes += entry.allocatedBytes || 0;
-      releasedCapabilityIds.push(id);
-      this.cache.delete(id);
+      try {
+        if (capability?.release) await capability.release(Object.freeze({ request, state, mode: this.mode, runtime: entry.instance }));
+        releasedBytes += entry.allocatedBytes || 0;
+        releasedCapabilityIds.push(id);
+      } catch (error) {
+        failures.push(error instanceof Error ? error : new Error(String(error)));
+        failedCapabilityIds.push(id);
+      } finally {
+        // A throwing release hook leaves runtime lifetime uncertain. Never retain an
+        // entry after release was attempted: later execution must rematerialize it.
+        this.cache.delete(id);
+        evictedCapabilityIds.push(id);
+      }
+    }
+    if (failures.length) {
+      const error = new AggregateError(failures, "IgnitionSession release cleanup failed");
+      error.code = "AXM_SESSION_RELEASE_FAILED";
+      error.failedCapabilityIds = failedCapabilityIds.sort();
+      error.evictedCapabilityIds = evictedCapabilityIds.sort();
+      error.releasedCapabilityIds = releasedCapabilityIds.sort();
+      throw error;
     }
     return { releasedBytes, releasedCapabilityIds: releasedCapabilityIds.sort() };
   }
