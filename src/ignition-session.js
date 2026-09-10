@@ -1,5 +1,9 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { CapabilityRegistry, hashValue } from "./ignition-core.js";
 import { createDomainInvalidationResolver, validateTransitionReceipt } from "./scoped-invalidation.js";
+
+const admittedOperationContext = new AsyncLocalStorage();
 
 function dependencyClosure(registry, initial) {
   const selected = new Map(initial.map((capability) => [capability.id, capability]));
@@ -77,7 +81,7 @@ export class IgnitionSession {
 
     let result;
     try {
-      result = operation();
+      result = admittedOperationContext.run({ session: this, settled }, operation);
     } catch (error) {
       this.activeOperations.delete(settled);
       settle();
@@ -129,6 +133,12 @@ export class IgnitionSession {
   async releaseAll(context = {}) { const result = await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; return result; }
   async close(context = {}) {
     if (this.closed) return;
+    const caller = admittedOperationContext.getStore();
+    if (caller?.session === this && this.activeOperations.has(caller.settled)) {
+      const error = new Error("IgnitionSession close() cannot be entered from work admitted by the same session");
+      error.code = "AXM_SESSION_REENTRANT_CLOSE";
+      throw error;
+    }
     // A close request revokes admission immediately. Operations that crossed the
     // boundary before this assignment retain only enough authority to settle; terminal
     // cleanup waits for them so their runtime/state changes cannot land after close.
