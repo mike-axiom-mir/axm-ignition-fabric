@@ -2,10 +2,10 @@ import { IgnitionSession } from "../src/ignition-session.js";
 import { runDirectRealisticBaseline } from "../src/direct-realistic-baseline.js";
 import { buildRealisticRegistry, buildWorkspaceState, realisticRequests } from "../src/realistic-workload.js";
 import {
+  REALISTIC_DOMAIN_BINDINGS,
   changeWorkspaceImportTarget,
   changeWorkspacePath,
   createWorkspaceTransitionReceipt,
-  resolveRealisticInvalidation,
 } from "../src/realistic-mutations.js";
 
 const fileCount = 2500;
@@ -30,7 +30,11 @@ function buildImportSequence() {
 
 async function runSequence({ strategy, states }) {
   const registry = buildRealisticRegistry();
-  const session = new IgnitionSession({ registry, mode: "ignition" });
+  const session = new IgnitionSession({
+    registry,
+    mode: "ignition",
+    domainBindings: strategy === "scoped" ? REALISTIC_DOMAIN_BINDINGS : null,
+  });
   const transitions = [];
   let allEquivalent = true;
   let totalWallMs = 0;
@@ -49,13 +53,8 @@ async function runSequence({ strategy, states }) {
       let transitionApply = null;
 
       if (strategy === "scoped") {
-        const resolution = resolveRealisticInvalidation({
-          transitionReceipt,
-          cachedCapabilityIds: session.cachedCapabilityIds,
-        });
         transitionApply = await session.applyTransition({
           transitionReceipt,
-          invalidatedCapabilityIds: resolution.invalidatedCapabilityIds,
           state: after,
         });
       }
@@ -85,6 +84,7 @@ async function runSequence({ strategy, states }) {
       transitions.push({
         index: i,
         changedDomains: transitionReceipt.changedDomains,
+        invalidationAuthority: transitionApply?.invalidationAuthority ?? "UNRECEIPTED_FULL_INVALIDATION",
         releasedCapabilityIds: strategy === "scoped"
           ? transitionApply.releasedCapabilityIds
           : run.receipt.fallbackInvalidation?.releasedCapabilityIds || [],
@@ -143,6 +143,7 @@ for (const [name, states] of [["path-only", buildPathSequence()], ["import-targe
   console.log(JSON.stringify(result));
   if (!result.equivalent) failed = true;
   if (!(result.saved.rematerializedBytes > 0)) failed = true;
+  if (!scoped.transitions.every((entry) => entry.invalidationAuthority === "SESSION_DOMAIN_BINDINGS")) failed = true;
   if (name === "path-only" && !scoped.transitions.every((entry) => entry.rematerializedCapabilityIds.length === 1 && entry.rematerializedCapabilityIds[0] === "workspace-metadata-index")) failed = true;
   if (name === "import-target" && !scoped.transitions.every((entry) => JSON.stringify(entry.rematerializedCapabilityIds) === JSON.stringify(["workspace-dependency-index", "workspace-duplicate-index"]))) failed = true;
 }
