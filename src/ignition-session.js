@@ -101,7 +101,19 @@ export class IgnitionSession {
     return { releasedBytes, releasedCapabilityIds: releasedCapabilityIds.sort() };
   }
   async releaseAll(context = {}) { const result = await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; return result; }
-  async close(context = {}) { if (this.closed) return; await this.releaseAll(context); this.closed = true; }
+  async close(context = {}) {
+    if (this.closed) return;
+    // A close request revokes this session's execution authority before any
+    // asynchronous release hook can yield control back to another caller.
+    this.closed = true;
+    try {
+      await this.releaseAll(context);
+    } finally {
+      // Cleanup failure is still evidence that close did not finish cleanly, but it
+      // must not revive the old canonical-session identity after authority was revoked.
+      this.stateHash = null;
+    }
+  }
 
   async applyTransition({ transitionReceipt, invalidatedCapabilityIds = null, state = null }) {
     if (this.closed) throw new Error("IgnitionSession is closed");
