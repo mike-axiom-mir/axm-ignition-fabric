@@ -18,6 +18,7 @@ test("re-entrant close from admitted work fails instead of deadlocking the ownin
       id: "self-close",
       match: (request) => request.kind === "self-close",
       run: async () => {
+        await new Promise((resolve) => setImmediate(resolve));
         await session.close();
         return { unexpectedlyClosed: true };
       },
