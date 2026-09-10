@@ -1,6 +1,6 @@
 {
   "name": "axm-ignition-fabric",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "private": true,
   "type": "module",
   "description": "Deterministic bounded capability materialization and state-bound session runtime.",
@@ -13,7 +13,8 @@
     "node": ">=18"
   },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./reference-state-closure-evidence": "./src/reference-state-closure-evidence.js"
   },
   "bin": {
     "axm-ignition": "./scripts/package-cli.mjs"
