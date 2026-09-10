@@ -57,6 +57,7 @@ async function materialize(capability, context) {
 
 export class IgnitionSession {
   #closeInFlight = null;
+  #releaseAllInFlight = null;
 
   constructor({ registry, mode = "ignition", domainBindings = null }) {
     if (!(registry instanceof CapabilityRegistry)) throw new Error("registry must be CapabilityRegistry");
@@ -75,6 +76,12 @@ export class IgnitionSession {
   get cacheBytes() { let total = 0; for (const entry of this.cache.values()) total += entry.allocatedBytes; return total; }
   get cachedCapabilityIds() { return [...this.cache.keys()].sort(); }
 
+  #releaseBusyError() {
+    const error = new Error("IgnitionSession releaseAll() cannot overlap stateful work or another release lifecycle");
+    error.code = "AXM_SESSION_RELEASE_BUSY";
+    return error;
+  }
+
   #trackOperation(operation) {
     if (this.closed) return Promise.reject(new Error("IgnitionSession is closed"));
     if (this.activeOperations.size) {
@@ -82,6 +89,7 @@ export class IgnitionSession {
       error.code = "AXM_SESSION_OPERATION_BUSY";
       return Promise.reject(error);
     }
+    if (this.#releaseAllInFlight) return Promise.reject(this.#releaseBusyError());
     let settle;
     const settled = new Promise((resolve) => { settle = resolve; });
     this.activeOperations.add(settled);
@@ -137,7 +145,31 @@ export class IgnitionSession {
     }
     return { releasedBytes, releasedCapabilityIds: releasedCapabilityIds.sort() };
   }
-  async releaseAll(context = {}) { const result = await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; return result; }
+
+  async #releaseAllInternal(context = {}) {
+    const result = await this.#releaseEntries([...this.cache.entries()], context);
+    this.stateHash = null;
+    return result;
+  }
+
+  #beginReleaseAll(context = {}) {
+    // Deferring one microtask lets the in-flight marker become authoritative before a
+    // release hook can synchronously re-enter the session from cleanup code.
+    const releaseWork = Promise.resolve().then(() => this.#releaseAllInternal(context));
+    this.#releaseAllInFlight = releaseWork;
+    releaseWork.finally(() => {
+      if (this.#releaseAllInFlight === releaseWork) this.#releaseAllInFlight = null;
+    }).catch(() => {});
+    return releaseWork;
+  }
+
+  async releaseAll(context = {}) {
+    if (this.activeOperations.size || this.#releaseAllInFlight || this.#closeInFlight) {
+      throw this.#releaseBusyError();
+    }
+    return this.#beginReleaseAll(context);
+  }
+
   async close(context = {}) {
     const caller = admittedOperationContext.getStore();
     if (caller?.session === this && this.activeOperations.has(caller.settled)) {
@@ -148,6 +180,7 @@ export class IgnitionSession {
     // Once terminal cleanup is in flight, every external close caller joins that exact
     // lifecycle instead of treating `closed` as evidence that cleanup already finished.
     if (this.#closeInFlight) return this.#closeInFlight;
+    if (this.#releaseAllInFlight) throw this.#releaseBusyError();
     if (this.closed) return;
 
     // A close request revokes admission immediately. Operations that crossed the
@@ -157,7 +190,7 @@ export class IgnitionSession {
     const closeWork = (async () => {
       try {
         await this.#drainActiveOperations();
-        await this.releaseAll(context);
+        await this.#beginReleaseAll(context);
       } finally {
         // Cleanup failure is still evidence that close did not finish cleanly, but it
         // must not revive the old canonical-session identity after authority was revoked.
@@ -234,7 +267,7 @@ export class IgnitionSession {
     const nextStateHash = stateFingerprint ?? hashValue(state);
     let fallbackInvalidation = null;
     if (this.stateHash !== null && this.stateHash !== nextStateHash) {
-      const released = await this.releaseAll({ request, state });
+      const released = await this.#releaseAllInternal({ request, state });
       fallbackInvalidation = { reason: "unreceipted-state-change", releasedCapabilityIds: released.releasedCapabilityIds, releasedBytes: released.releasedBytes };
     }
     this.stateHash = nextStateHash;
