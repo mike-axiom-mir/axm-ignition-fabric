@@ -1,5 +1,5 @@
 import { CapabilityRegistry, hashValue } from "./ignition-core.js";
-import { validateTransitionReceipt } from "./scoped-invalidation.js";
+import { createDomainInvalidationResolver, validateTransitionReceipt } from "./scoped-invalidation.js";
 
 function dependencyClosure(registry, initial) {
   const selected = new Map(initial.map((capability) => [capability.id, capability]));
@@ -30,6 +30,18 @@ function topoSort(capabilities) {
   return ordered;
 }
 
+function normalizeCapabilityIds(capabilityIds, fieldName) {
+  if (!Array.isArray(capabilityIds)) throw new Error(`${fieldName} must be an array`);
+  if (capabilityIds.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new Error(`${fieldName} must contain non-empty strings`);
+  }
+  return [...new Set(capabilityIds)].sort();
+}
+
+function sameIds(left, right) {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
 async function materialize(capability, context) {
   if (!capability.materialize) return { instance: null, allocatedBytes: 0 };
   const body = await capability.materialize(Object.freeze(context));
@@ -40,10 +52,18 @@ async function materialize(capability, context) {
 }
 
 export class IgnitionSession {
-  constructor({ registry, mode = "ignition" }) {
+  constructor({ registry, mode = "ignition", domainBindings = null }) {
     if (!(registry instanceof CapabilityRegistry)) throw new Error("registry must be CapabilityRegistry");
     if (!["ignition", "eager"].includes(mode)) throw new Error("mode must be ignition or eager");
-    this.registry = registry; this.mode = mode; this.cache = new Map(); this.stateHash = null; this.closed = false;
+    if (domainBindings !== null && (!domainBindings || typeof domainBindings !== "object" || Array.isArray(domainBindings))) {
+      throw new Error("domainBindings must be an object or null");
+    }
+    this.registry = registry;
+    this.mode = mode;
+    this.cache = new Map();
+    this.stateHash = null;
+    this.closed = false;
+    this.invalidationResolver = domainBindings === null ? null : createDomainInvalidationResolver(domainBindings);
   }
   get cacheBytes() { let total = 0; for (const entry of this.cache.values()) total += entry.allocatedBytes; return total; }
   get cachedCapabilityIds() { return [...this.cache.keys()].sort(); }
@@ -63,12 +83,36 @@ export class IgnitionSession {
   async releaseAll(context = {}) { const result = await this.#releaseEntries([...this.cache.entries()], context); this.stateHash = null; return result; }
   async close(context = {}) { if (this.closed) return; await this.releaseAll(context); this.closed = true; }
 
-  async applyTransition({ transitionReceipt, invalidatedCapabilityIds = [], state = null }) {
+  async applyTransition({ transitionReceipt, invalidatedCapabilityIds = null, state = null }) {
     if (this.closed) throw new Error("IgnitionSession is closed");
     if (this.stateHash === null) throw new Error("cannot apply transition before session has a canonical state");
     const expectedTo = state === null ? undefined : hashValue(state);
     validateTransitionReceipt(transitionReceipt, { expectedFrom: this.stateHash, expectedTo });
-    const requested = [...new Set(invalidatedCapabilityIds)].sort();
+
+    let requested;
+    let invalidationAuthority;
+    if (this.invalidationResolver) {
+      const resolution = this.invalidationResolver({
+        transitionReceipt,
+        cachedCapabilityIds: this.cachedCapabilityIds,
+      });
+      requested = resolution.invalidatedCapabilityIds;
+      invalidationAuthority = "SESSION_DOMAIN_BINDINGS";
+
+      if (invalidatedCapabilityIds !== null) {
+        const supplied = normalizeCapabilityIds(invalidatedCapabilityIds, "invalidatedCapabilityIds");
+        if (!sameIds(supplied, requested)) {
+          throw new Error("invalidatedCapabilityIds mismatch session domain bindings");
+        }
+      }
+    } else {
+      if (invalidatedCapabilityIds !== null) {
+        throw new Error("scoped invalidation requires session domainBindings");
+      }
+      requested = this.cachedCapabilityIds;
+      invalidationAuthority = "FULL_CACHE_FALLBACK_NO_DOMAIN_BINDINGS";
+    }
+
     const entries = requested.filter((id) => this.cache.has(id)).map((id) => [id, this.cache.get(id)]);
     const released = await this.#releaseEntries(entries, { state });
     this.stateHash = transitionReceipt.toStateHash;
@@ -76,7 +120,8 @@ export class IgnitionSession {
       schema: "axm.ignition-session-transition/v0.06",
       transitionReceiptHash: transitionReceipt.receiptHash,
       changedDomains: [...transitionReceipt.changedDomains],
-      invalidatedCapabilityIds: requested,
+      invalidationAuthority,
+      invalidatedCapabilityIds: [...requested],
       releasedCapabilityIds: released.releasedCapabilityIds,
       releasedBytes: released.releasedBytes,
       retainedCapabilityIds: this.cachedCapabilityIds,
