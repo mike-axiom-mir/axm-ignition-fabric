@@ -4,9 +4,9 @@ import assert from "node:assert/strict";
 import { IgnitionSession } from "../src/ignition-session.js";
 import { hashValue } from "../src/ignition-core.js";
 import { runDirectRealisticBaseline } from "../src/direct-realistic-baseline.js";
-import { createTransitionReceipt, validateTransitionReceipt } from "../src/scoped-invalidation.js";
 import { buildRealisticRegistry, buildWorkspaceState, realisticRequests } from "../src/realistic-workload.js";
 import {
+  REALISTIC_DOMAIN_BINDINGS,
   changeWorkspaceImportTarget,
   changeWorkspacePath,
   createWorkspaceTransitionReceipt,
@@ -15,7 +15,11 @@ import {
 } from "../src/realistic-mutations.js";
 
 async function warmReport(state) {
-  const session = new IgnitionSession({ registry: buildRealisticRegistry(), mode: "ignition" });
+  const session = new IgnitionSession({
+    registry: buildRealisticRegistry(),
+    mode: "ignition",
+    domainBindings: REALISTIC_DOMAIN_BINDINGS,
+  });
   const run = await session.run({ request: realisticRequests.report, state });
   assert.equal(run.receipt.cacheCapabilityIds.length, 7);
   return session;
@@ -77,9 +81,10 @@ test("scoped path transition retains six warm bodies and rematerializes metadata
 
     const applied = await session.applyTransition({
       transitionReceipt: transition,
-      invalidatedCapabilityIds: resolution.invalidatedCapabilityIds,
       state: after,
     });
+    assert.equal(applied.invalidationAuthority, "SESSION_DOMAIN_BINDINGS");
+    assert.deepEqual(applied.invalidatedCapabilityIds, resolution.invalidatedCapabilityIds);
     assert.equal(applied.retainedCapabilityIds.length, 6);
     assert.deepEqual(applied.releasedCapabilityIds, ["workspace-metadata-index"]);
 
@@ -106,7 +111,8 @@ test("scoped import transition invalidates dependency and duplicate bodies only"
   try {
     const resolution = resolveRealisticInvalidation({ transitionReceipt: transition, cachedCapabilityIds: session.cachedCapabilityIds });
     assert.deepEqual(resolution.invalidatedCapabilityIds, ["workspace-dependency-index", "workspace-duplicate-index"]);
-    await session.applyTransition({ transitionReceipt: transition, invalidatedCapabilityIds: resolution.invalidatedCapabilityIds, state: after });
+    const applied = await session.applyTransition({ transitionReceipt: transition, state: after });
+    assert.deepEqual(applied.invalidatedCapabilityIds, resolution.invalidatedCapabilityIds);
 
     const scoped = await session.run({ request: realisticRequests.report, state: after, stateFingerprint: transition.toStateHash });
     assert.deepEqual(scoped.receipt.newlyMaterializedCapabilityIds, ["workspace-dependency-index", "workspace-duplicate-index"]);
@@ -143,7 +149,7 @@ test("transition receipt cannot be applied to the wrong canonical base", async (
   const session = await warmReport(other);
   try {
     await assert.rejects(
-      session.applyTransition({ transitionReceipt: transition, invalidatedCapabilityIds: ["workspace-metadata-index"], state: after }),
+      session.applyTransition({ transitionReceipt: transition, state: after }),
       /fromStateHash mismatch/
     );
     assert.equal(session.cachedCapabilityIds.length, 7);
@@ -163,7 +169,6 @@ test("transition receipt cannot claim a different target state", async () => {
     await assert.rejects(
       session.applyTransition({
         transitionReceipt: transition,
-        invalidatedCapabilityIds: ["workspace-metadata-index"],
         state: actualAfter,
       }),
       /toStateHash mismatch/,
