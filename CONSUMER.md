@@ -13,7 +13,7 @@ npm pack --ignore-scripts
 Install that tarball into another project without contacting a registry:
 
 ```bash
-npm install --offline /path/to/axm-ignition-fabric-0.0.23.tgz
+npm install --offline /path/to/axm-ignition-fabric-0.0.24.tgz
 axm-ignition describe
 axm-ignition demo
 ```
@@ -43,6 +43,36 @@ const run = await executeIgnitionRun({
 
 console.log(run.result.double); // 42
 ```
+
+## Optional Reference-state Closure research evidence
+
+The package also exposes one deliberately provider-specific evidence adapter:
+
+```js
+import { runReferenceStateClosureEvidence } from
+  "axm-ignition-fabric/reference-state-closure-evidence";
+
+const receipt = runReferenceStateClosureEvidence({
+  pyzPath: "/reviewed/path/reference-state-closure.pyz",
+  providerSource: {
+    repository: "mike-axiom-mir/axm-state-research",
+    revision: "<reviewed 40-character git revision>"
+  }
+});
+```
+
+This does not discover, download, install, or select a provider. The caller
+must deliberately supply a local regular `.pyz` file and its reviewed source
+revision. The adapter independently hashes the artifact, asks the portable
+provider to `verify`, `describe`, and `run`, then admits only the exact v1
+software experiment contract and its default fixture evidence. Missing or
+drifting providers return `HOLD`.
+
+A passing `axm.ignition.reference-state-closure-evidence/v0.1` receipt is
+**research evidence only**. It preserves the provider's software-only truth
+boundary and does not establish Ignition performance, runtime superiority,
+authenticated authorship, automatic execution authority, canonical-state
+mutation, merge, or CANON authority.
 
 The package intentionally excludes benchmark evidence, research prose, tests,
 and probe scripts. Those remain in the repository for review. The package is
