@@ -124,3 +124,46 @@ test("concurrent external close callers observe the same cleanup failure", async
   await session.close({ state: { revision: 2 } });
   assert.equal(releaseCalls, 1);
 });
+
+test("admitted work cannot join an external close that is draining that same work", async () => {
+  const executionStarted = deferred();
+  const allowSelfClose = deferred();
+  let session;
+
+  const registry = new CapabilityRegistry([
+    {
+      id: "self-close-during-external-close",
+      match: (request) => request.kind === "self-close-during-external-close",
+      run: async () => {
+        executionStarted.resolve();
+        await allowSelfClose.promise;
+        try {
+          await session.close();
+          return { closeOutcome: "unexpectedly-fulfilled" };
+        } catch (error) {
+          return { closeOutcome: error?.code ?? "unknown-error" };
+        }
+      },
+    },
+  ]);
+
+  session = new IgnitionSession({ registry, mode: "ignition" });
+  const runPromise = session.run({
+    request: { kind: "self-close-during-external-close" },
+    state: { revision: 3 },
+  });
+  await executionStarted.promise;
+
+  let externalCloseSettled = false;
+  const externalClose = session.close({ state: { revision: 3 } }).then(() => { externalCloseSettled = true; });
+  assert.equal(session.closed, true);
+
+  allowSelfClose.resolve();
+  const run = await runPromise;
+  assert.equal(run.result["self-close-during-external-close"].closeOutcome, "AXM_SESSION_REENTRANT_CLOSE");
+  assert.equal(externalCloseSettled, false, "external close cannot finish before the admitted operation settles");
+
+  await externalClose;
+  assert.equal(externalCloseSettled, true);
+  assert.equal(session.stateHash, null);
+});
