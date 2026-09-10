@@ -77,6 +77,11 @@ export class IgnitionSession {
 
   #trackOperation(operation) {
     if (this.closed) return Promise.reject(new Error("IgnitionSession is closed"));
+    if (this.activeOperations.size) {
+      const error = new Error("IgnitionSession already has an admitted stateful operation");
+      error.code = "AXM_SESSION_OPERATION_BUSY";
+      return Promise.reject(error);
+    }
     let settle;
     const settled = new Promise((resolve) => { settle = resolve; });
     this.activeOperations.add(settled);
