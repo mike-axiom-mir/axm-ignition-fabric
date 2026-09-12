@@ -1,0 +1,110 @@
+{
+  "schema": "axm.ignition-shared-traversal-fingerprint-evidence/v0.18",
+  "status": "MEASURED_IN_HARNESS",
+  "implementation": {
+    "head": "cc37996e3dc4289ff48d8fef2b329313535e675b",
+    "githubActionsRun": 33376476561,
+    "githubActionsJob": 99438986284,
+    "tests": { "passed": 98, "total": 98 },
+    "ciGatesPassed": 22
+  },
+  "question": "Can adaptive route selection and canonical fingerprinting share one object-graph traversal, eliminating v0.17's separate structural preflight, while preserving exact fingerprints and reducing total resource cost?",
+  "architecture": {
+    "previousV017": "capped structural preflight -> restart -> monolithic or streaming fingerprint",
+    "v018": "one canonical traversal -> buffer canonical prefix until threshold -> if small hash compact buffer; if large feed prefix to FNV, release it, and continue the same traversal",
+    "thresholdCharacters": 65536,
+    "truthInvariant": "The shared path must produce the exact same canonical character count, route, and FNV-1a hash as the v0.17 reference for every measured input.",
+    "singleTraversalInvariant": "Shared traversal reports traversalPasses=1 and objectTraversalRestarts=0."
+  },
+  "benchmark": {
+    "samplesPerMemoryMode": 5,
+    "samplesPerTimingMode": 5,
+    "workspaceFileCounts": [25, 100, 250, 500, 2500],
+    "extraScenarios": ["tiny", "giant-string"],
+    "methods": ["v017", "shared"],
+    "memoryBoundary": "Fresh Node 22 processes with --expose-gc. v0.17 measures preflight plus its selected historical path. v0.18 measures in-flight prefix lifetime and the same single canonical traversal. RSS, heapTotal, heapUsed, external, and ArrayBuffer are overlapping envelopes and are not summed.",
+    "timingBoundary": "Five separate fresh Node 22 processes per method/input without forced-GC instrumentation. Input construction and post-timing truth verification are excluded. Hosted medians are observations, not production distributions."
+  },
+  "results": {
+    "tiny": {
+      "canonicalCharacters": 55,
+      "hash": "f3a0dd96",
+      "route": "monolithic",
+      "v017": { "timingMedianMs": 0.290886, "heapUsedPeakBytes": 10344, "rssPeakBytes": 393216, "preflightNodes": 9 },
+      "shared": { "timingMedianMs": 0.386778, "heapUsedPeakBytes": 18088, "rssPeakBytes": 262144, "canonicalTraversalNodes": 9, "retainedPrefixCharacters": 55, "objectTraversalRestarts": 0 },
+      "deltaV017MinusShared": { "timingMs": -0.095892, "heapUsedPeakBytes": -7744, "rssPeakBytes": 131072 },
+      "interpretation": "Small composite counterexample: shared traversal removes the separate preflight but chunk-derived prefix construction costs more time and heap than v0.17's cheap preflight plus optimized monolithic serialization."
+    },
+    "workspace25": {
+      "canonicalCharacters": 11954,
+      "hash": "ea144bb8",
+      "route": "monolithic",
+      "v017": { "timingMedianMs": 1.396063, "heapUsedPeakBytes": 30560, "rssPeakBytes": 786432, "preflightNodes": 155 },
+      "shared": { "timingMedianMs": 1.245472, "heapUsedPeakBytes": 49816, "rssPeakBytes": 667648, "canonicalTraversalNodes": 155, "retainedPrefixCharacters": 11954, "objectTraversalRestarts": 0 },
+      "deltaV017MinusShared": { "timingMs": 0.150591, "heapUsedPeakBytes": -19256, "rssPeakBytes": 118784 }
+    },
+    "workspace100": {
+      "canonicalCharacters": 48989,
+      "hash": "325ba4c3",
+      "route": "monolithic",
+      "v017": { "timingMedianMs": 2.839412, "heapUsedPeakBytes": 62424, "rssPeakBytes": 786432, "preflightNodes": 605 },
+      "shared": { "timingMedianMs": 2.991566, "heapUsedPeakBytes": 148264, "rssPeakBytes": 917504, "canonicalTraversalNodes": 605, "retainedPrefixCharacters": 48989, "objectTraversalRestarts": 0 },
+      "deltaV017MinusShared": { "timingMs": -0.152154, "heapUsedPeakBytes": -85840, "rssPeakBytes": -131072 },
+      "interpretation": "Mid-size monolithic counterexample: one traversal is slower and materially higher-heap than v0.17."
+    },
+    "workspace250": {
+      "canonicalCharacters": 124636,
+      "hash": "64674431",
+      "route": "streaming",
+      "v017": { "timingMedianMs": 4.068745, "heapUsedPeakBytes": 12208, "rssPeakBytes": 1572864, "preflightNodes": 833, "selectedTraversalNodes": 1505 },
+      "shared": { "timingMedianMs": 5.089431, "heapUsedPeakBytes": 80128, "rssPeakBytes": 1454080, "canonicalTraversalNodes": 1505, "switchAtCanonicalCharacter": 65912, "bufferedPrefixCharacters": 65459, "objectTraversalRestarts": 0 },
+      "deltaV017MinusShared": { "timingMs": -1.020686, "heapUsedPeakBytes": -67920, "rssPeakBytes": 118784, "structuralNodeVisitsAvoided": 833 }
+    },
+    "workspace500": {
+      "canonicalCharacters": 251133,
+      "hash": "3a639627",
+      "route": "streaming",
+      "v017": { "timingMedianMs": 5.809814, "heapUsedPeakBytes": 14184, "heapTotalPeakBytes": 262144, "rssPeakBytes": 1179648, "preflightNodes": 827, "selectedTraversalNodes": 3005 },
+      "shared": { "timingMedianMs": 7.528952, "heapUsedPeakBytes": 80736, "heapTotalPeakBytes": 2359296, "rssPeakBytes": 1703936, "canonicalTraversalNodes": 3005, "bufferedPrefixCharacters": 65459, "objectTraversalRestarts": 0 },
+      "deltaV017MinusShared": { "timingMs": -1.719138, "heapUsedPeakBytes": -66552, "heapTotalPeakBytes": -2097152, "rssPeakBytes": -524288, "structuralNodeVisitsAvoided": 827 },
+      "interpretation": "Hard counterexample: despite fewer structural node-visits, shared traversal is slower and worse on all measured heap/RSS high-water fields here."
+    },
+    "workspace2500": {
+      "canonicalCharacters": 1284856,
+      "hash": "7e77d21a",
+      "route": "streaming",
+      "v017": { "timingMedianMs": 17.987091, "heapUsedPeakBytes": 10360, "heapTotalPeakBytes": 4456448, "rssPeakBytes": 5451776, "preflightNodes": 803, "selectedTraversalNodes": 15005 },
+      "shared": { "timingMedianMs": 19.759375, "heapUsedPeakBytes": 76960, "heapTotalPeakBytes": 4718592, "rssPeakBytes": 3653632, "canonicalTraversalNodes": 15005, "traversalPasses": 1, "objectTraversalRestarts": 0, "switchAtCanonicalCharacter": 65913, "bufferedPrefixCharacters": 65460, "switchChunkCharacters": 453, "maxRetainedCanonicalPrefixCharacters": 65460 },
+      "deltaV017MinusShared": { "timingMs": -1.772284, "heapUsedPeakBytes": -66600, "heapTotalPeakBytes": -262144, "rssPeakBytes": 1798144, "structuralNodeVisitsAvoided": 803, "conceptualV017NodeVisits": 15808, "sharedCanonicalTraversalNodes": 15005 },
+      "interpretation": "The structural objective succeeds: 803 preflight node-visits disappear and the object graph is traversed once. The resource objective does not: the retained-prefix transition costs about 1.77 ms and 66.6 KB extra heapUsed versus v0.17, although hosted median RSS is about 1.80 MB lower."
+    },
+    "giantString": {
+      "canonicalCharacters": 131074,
+      "hash": "a302aa85",
+      "route": "streaming",
+      "v017": { "timingMedianMs": 4.274637, "heapUsedPeakBytes": 148760, "heapTotalPeakBytes": 139264, "rssPeakBytes": 1323008, "preflightNodes": 1, "selectedTraversalNodes": 1 },
+      "shared": { "timingMedianMs": 3.939839, "heapUsedPeakBytes": 280040, "heapTotalPeakBytes": 401408, "rssPeakBytes": 1179648, "canonicalTraversalNodes": 1, "maxCanonicalChunkCharacters": 131074, "objectTraversalRestarts": 0 },
+      "deltaV017MinusShared": { "timingMs": 0.334798, "heapUsedPeakBytes": -131280, "heapTotalPeakBytes": -262144, "rssPeakBytes": 143360, "structuralNodeVisitsAvoided": 1 },
+      "interpretation": "A giant primitive has almost no structural preflight to remove and the current serializer emits its JSON string as one giant chunk. Shared traversal is faster here in this sample but uses materially more heap; this is not evidence of universally bounded streaming chunks."
+    }
+  },
+  "criticalFinding": "Less traversal is not the same as less work. v0.18 successfully eliminates v0.17's separate structural preflight, but the naive growing-string canonical prefix creates a more expensive intermediate. At 2,500 files it removes 803 preflight node-visits yet is about 1.77 ms slower and about 66.6 KB higher in heapUsed peak, while RSS is about 1.80 MB lower in this hosted sample.",
+  "strongestSupportedClaim": "In this deterministic Node harness, shared-traversal adaptive hashing preserved exact v0.17 canonical fingerprints and route decisions while reducing the composite object graph to one instrumented traversal with zero restarts. The naive retained-prefix implementation did not improve overall cost: at 2,500 files it avoided 803 structural preflight node-visits but was about 1.77 ms slower and used about 66.6 KB more heapUsed peak than v0.17, while measured RSS was about 1.80 MB lower. Therefore removing a traversal did not reduce total work because prefix construction and retention became the new dominant adaptation tax.",
+  "notProven": [
+    "shared traversal is globally better than v0.17",
+    "fewer object-graph visits imply lower CPU time",
+    "RSS and heap high-water will move together",
+    "65,536 is an optimal prefix threshold",
+    "the current string-concatenation prefix is an optimal spool representation",
+    "canonical streaming chunks are bounded for arbitrary primitive strings",
+    "five hosted samples define production behavior",
+    "datacenter, fleet, energy, cloud-cost, CPU, or density savings"
+  ],
+  "nextGate": {
+    "version": "v0.19",
+    "name": "bounded prefix spool strategies",
+    "question": "Can one object-graph traversal be retained while replacing the growing-string prefix with a cheaper bounded spool, so the structural win stops manufacturing a more expensive intermediate?",
+    "candidateComparison": ["v0.17 two-pass adaptive", "v0.18 growing-string prefix", "chunk-array prefix joined only for small values", "direct streaming / shallow fast-path where appropriate"],
+    "principle": "Do not delete one scan by manufacturing a more expensive intermediate."
+  }
+}

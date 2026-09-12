@@ -1,0 +1,42 @@
+name: MergeAgent Ignition consolidation reseal
+
+on:
+  push:
+    branches:
+      - automation/mergeagent-ignition-consolidation-20260912
+
+permissions:
+  contents: write
+
+jobs:
+  reseal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout consolidation branch
+        uses: actions/checkout@v4
+        with:
+          ref: automation/mergeagent-ignition-consolidation-20260912
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Regenerate public capability evidence
+        run: node tools/generate-public-capabilities.mjs --write
+      - name: Verify generated discovery evidence
+        run: node tools/generate-public-capabilities.mjs --check
+      - name: Run complete deterministic test suite
+        run: npm test
+      - name: Run deterministic demo
+        run: npm run demo
+      - name: Check patch hygiene
+        run: git diff --check
+      - name: Commit generated evidence and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/mergeagent-ignition-consolidation.yml
+          git add registry/capabilities.jsonl registry/capabilities.receipt.json
+          git config user.name "AXM MergeAgent"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Regenerate Ignition consolidation evidence"
+          git push origin HEAD:automation/mergeagent-ignition-consolidation-20260912

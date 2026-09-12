@@ -1,0 +1,138 @@
+{
+  "schema": "axm.ignition-retention-evidence/v0.07",
+  "status": "MEASURED_IN_HARNESS",
+  "testedHead": "f44c2e083ccd955f24ea5a83579c581b68ce33c8",
+  "githubActionsRunId": 33332834767,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "workspaceFiles": 2500
+  },
+  "tests": {
+    "passed": 38,
+    "failed": 0,
+    "hardBudgetRetentionBenchmark": "PASS",
+    "allPolicyResultsEquivalentToFreshDirectBaseline": true
+  },
+  "failureLineage": [
+    {
+      "runId": 33332796945,
+      "status": "FAILED_TEST_FIXTURE",
+      "cause": "The LRU unit test used a 40 KB budget that could hold both 1,000-file dependency and symbol bodies, so no eviction correctly occurred while the test incorrectly demanded one.",
+      "repair": "Changed the test budget to 20 KB, where each body fits individually but both cannot coexist. No cache algorithm change was required."
+    }
+  ],
+  "policies": {
+    "none": "never retain derived bodies",
+    "lru": "evict least-recently-used retained body when the hard byte ceiling would be exceeded",
+    "value": "deterministic score = measured materializeMs * (hitCount + 1), normalized by 64 KiB body units; evict lowest score first"
+  },
+  "hardBudgetBehavior": [
+    "cacheBytesAfter must never exceed maxCacheBytes",
+    "a body larger than the entire budget is used transiently and released rather than violating the budget",
+    "canonical state change currently invalidates the complete v0.07 budget cache",
+    "all cached outputs are verified against deterministic direct-route result hashes"
+  ],
+  "benchmarks": [
+    {
+      "scenario": "hot-search",
+      "maxCacheBytes": 900000,
+      "requests": 12,
+      "equivalent": true,
+      "none": {
+        "totalWallMs": 648.454485,
+        "totalMaterializedBytes": 6793808,
+        "hitCount": 0,
+        "evictionCount": 0,
+        "finalCacheBytes": 0
+      },
+      "lru": {
+        "totalWallMs": 297.986003,
+        "totalMaterializedBytes": 1767488,
+        "hitCount": 6,
+        "evictionCount": 2,
+        "finalCacheBytes": 890040,
+        "importantEviction": "workspace-search-index",
+        "searchEvictedAfterHits": 3,
+        "searchBytes": 837720
+      },
+      "value": {
+        "totalWallMs": 229.583004,
+        "totalMaterializedBytes": 929768,
+        "hitCount": 7,
+        "evictionCount": 1,
+        "finalCacheBytes": 890040,
+        "evicted": "workspace-dependency-index",
+        "evictedBytes": 39728,
+        "searchRetained": true
+      },
+      "observedFastestPolicy": "value",
+      "interpretation": "The hot expensive search body was reused three times before a burst of smaller indexes. LRU discarded the old search body and had to rebuild it later. The value policy retained the expensive reused search body and evicted the cheaper dependency body instead, reducing rematerialization in this workload."
+    },
+    {
+      "scenario": "low-reuse",
+      "maxCacheBytes": 900000,
+      "requests": 4,
+      "equivalent": true,
+      "none": {
+        "totalWallMs": 72.390107,
+        "totalMaterializedBytes": 92048,
+        "hitCount": 0,
+        "finalCacheBytes": 0
+      },
+      "lru": {
+        "totalWallMs": 76.00936,
+        "totalMaterializedBytes": 92048,
+        "hitCount": 0,
+        "finalCacheBytes": 92048
+      },
+      "value": {
+        "totalWallMs": 70.070979,
+        "totalMaterializedBytes": 92048,
+        "hitCount": 0,
+        "finalCacheBytes": 92048
+      },
+      "observedFastestPolicy": "value",
+      "interpretation": "No policy received a cache hit. The few-millisecond ordering is a single-run timing observation and does not establish a retention advantage. Both retention policies consumed 92,048 bytes with zero observed reuse, so no-retention remains the lower-memory grounded option for this trace."
+    },
+    {
+      "scenario": "alternating-small",
+      "maxCacheBytes": 60000,
+      "requests": 12,
+      "equivalent": true,
+      "none": {
+        "totalWallMs": 216.254244,
+        "totalMaterializedBytes": 477288,
+        "hitCount": 0,
+        "evictionCount": 0,
+        "finalCacheBytes": 0
+      },
+      "lru": {
+        "totalWallMs": 205.057579,
+        "totalMaterializedBytes": 477288,
+        "hitCount": 0,
+        "evictionCount": 11,
+        "finalCacheBytes": 39820
+      },
+      "value": {
+        "totalWallMs": 206.240927,
+        "totalMaterializedBytes": 477288,
+        "hitCount": 0,
+        "evictionCount": 11,
+        "finalCacheBytes": 39820
+      },
+      "observedFastestPolicy": "lru",
+      "interpretation": "The 60 KB budget cannot hold both alternating dependency and symbol bodies, so both retention policies thrash with zero hits and eleven evictions. LRU was slightly faster than value in this hosted sample. This is a retained counterexample where the value policy adds no useful cache behavior."
+    }
+  ],
+  "timingBoundary": "Each policy runs in a fresh Node process. Direct baseline result verification is completed before policy timing. Single hosted timing samples are observations, not statistical performance distributions.",
+  "strongestSupportedClaim": "Under a hard cache budget, deterministic retention policy can preserve exact results while choosing which derived bodies remain warm. A measured rebuild-cost/reuse/size policy can outperform LRU when an old but expensive reused body competes with cheaper bodies, but it is not universally better: LRU slightly won a thrashing alternating-small trace and low-reuse retention produced no cache hits.",
+  "boundaries": [
+    "v0.07 budgeted retention currently supports exactly one dependency-free matched capability per request.",
+    "v0.07 state change uses full cache invalidation; it is not yet integrated with v0.06 scoped transition invalidation.",
+    "Measured materialization time is runtime/noise-sensitive and should not be treated as a timeless intrinsic capability value.",
+    "No statistically established timing distribution is claimed from one hosted sample per policy/workload.",
+    "Does not prove globally optimal eviction, universal speedup, production-scale superiority, created RAM, free compute, or free energy."
+  ],
+  "nextGate": "Integrate v0.06 scoped transition invalidation with v0.07 hard-budget retention, then test whether invalidation and eviction can cooperate without stale derived state or needless cache churn. Add repeated samples/aggregate distributions before promoting timing heuristics further."
+}

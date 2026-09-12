@@ -1,0 +1,124 @@
+{
+  "schema": "axm.ignition-realistic-evidence/v0.03",
+  "status": "MEASURED_IN_HARNESS",
+  "testedHead": "d07767a74b759b960b19c4a95571d5bacda725c1",
+  "githubActionsRunId": 33330862222,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2"
+  },
+  "workload": {
+    "kind": "deterministic software workspace",
+    "fileCount": 2500,
+    "derivedBodies": [
+      "metadata index",
+      "dependency index parsed from imports",
+      "symbol index parsed from exports",
+      "token occurrence search index",
+      "duplicate-content hash index",
+      "lint-marker index",
+      "report risk projection"
+    ]
+  },
+  "tests": {
+    "passed": 14,
+    "failed": 0,
+    "realisticBenchmarkScenarios": 6
+  },
+  "measurements": [
+    {
+      "scenario": "dependencies",
+      "equivalent": true,
+      "eagerMaterializedCount": 7,
+      "ignitionMaterializedCount": 1,
+      "eagerMaterializedBytes": 962268,
+      "ignitionMaterializedBytes": 39728,
+      "savedBytes": 922540,
+      "eagerMaterializeMs": 101.697187,
+      "ignitionMaterializeMs": 1.944865,
+      "eagerTotalElapsedMs": 129.755435,
+      "ignitionTotalElapsedMs": 28.406374
+    },
+    {
+      "scenario": "symbols",
+      "equivalent": true,
+      "eagerMaterializedCount": 7,
+      "ignitionMaterializedCount": 1,
+      "eagerMaterializedBytes": 962268,
+      "ignitionMaterializedBytes": 39820,
+      "savedBytes": 922448,
+      "eagerMaterializeMs": 96.376166,
+      "ignitionMaterializeMs": 5.523485,
+      "eagerTotalElapsedMs": 122.885295,
+      "ignitionTotalElapsedMs": 32.479057
+    },
+    {
+      "scenario": "search",
+      "equivalent": true,
+      "eagerMaterializedCount": 7,
+      "ignitionMaterializedCount": 1,
+      "eagerMaterializedBytes": 962268,
+      "ignitionMaterializedBytes": 837720,
+      "savedBytes": 124548,
+      "eagerMaterializeMs": 92.549957,
+      "ignitionMaterializeMs": 74.305794,
+      "eagerTotalElapsedMs": 120.487955,
+      "ignitionTotalElapsedMs": 98.774637
+    },
+    {
+      "scenario": "duplicates",
+      "equivalent": true,
+      "eagerMaterializedCount": 7,
+      "ignitionMaterializedCount": 1,
+      "eagerMaterializedBytes": 962268,
+      "ignitionMaterializedBytes": 10000,
+      "savedBytes": 952268,
+      "eagerMaterializeMs": 92.633822,
+      "ignitionMaterializeMs": 4.092961,
+      "eagerTotalElapsedMs": 118.408826,
+      "ignitionTotalElapsedMs": 28.91802
+    },
+    {
+      "scenario": "lint",
+      "equivalent": true,
+      "eagerMaterializedCount": 7,
+      "ignitionMaterializedCount": 1,
+      "eagerMaterializedBytes": 962268,
+      "ignitionMaterializedBytes": 2500,
+      "savedBytes": 959768,
+      "eagerMaterializeMs": 97.6373,
+      "ignitionMaterializeMs": 0.502299,
+      "eagerTotalElapsedMs": 123.585931,
+      "ignitionTotalElapsedMs": 27.064214
+    },
+    {
+      "scenario": "report",
+      "equivalent": true,
+      "eagerMaterializedCount": 7,
+      "ignitionMaterializedCount": 7,
+      "eagerMaterializedBytes": 962268,
+      "ignitionMaterializedBytes": 962268,
+      "savedBytes": 0,
+      "eagerMaterializeMs": 92.28929,
+      "ignitionMaterializeMs": 93.251997,
+      "eagerTotalElapsedMs": 120.183857,
+      "ignitionTotalElapsedMs": 117.651739,
+      "interpretation": "No materialization advantage when every capability body is relevant; timing difference is not treated as meaningful from one run."
+    }
+  ],
+  "failedRun": {
+    "githubActionsRunId": 33330828361,
+    "cause": "benchmark reporter referenced a wrong variable name after all 13 workload/unit tests had already passed",
+    "repair": "corrected saved-byte field and added a CLI regression test covering both a savings case and the report no-savings case"
+  },
+  "strongestSupportedClaim": "For this deterministic parsed/indexed workspace harness, on-demand materialization preserved exact results and substantially reduced derived runtime allocation and materialization time when requests used only a subset of capability bodies. When all seven bodies were relevant, the materialization saving was exactly zero.",
+  "boundaries": [
+    "This is one deterministic synthetic software workspace, not a production repository corpus.",
+    "One GitHub Actions measurement per scenario is not a statistical performance benchmark.",
+    "The benchmark does not yet measure warm-cache reuse across repeated requests.",
+    "The benchmark does not prove lower CPU cost for all workloads or all request breadths.",
+    "The benchmark does not prove created RAM, free compute, or free energy.",
+    "The broad report is a demonstrated no-savings case for materialized bytes."
+  ],
+  "nextGate": "Add repeated-run/warm-cache modes plus a direct non-Ignition baseline to measure allocation churn, reuse, and the request-breadth break-even where orchestration overhead stops paying for itself."
+}

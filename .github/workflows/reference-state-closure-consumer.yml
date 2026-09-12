@@ -1,0 +1,95 @@
+name: Reference-state Closure consumer bridge
+
+on:
+  pull_request:
+
+jobs:
+  consumer-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - name: Checkout exact consumer head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax check adapter
+        run: node --check src/reference-state-closure-evidence.js
+      - name: Run complete consumer tests
+        run: npm test
+      - name: Prove exported subpath survives clean offline packing
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="$(npm pack --ignore-scripts --silent)"
+          mkdir -p "$RUNNER_TEMP/consumer"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y >/dev/null
+          npm install --offline --ignore-scripts "$GITHUB_WORKSPACE/$tarball" >/dev/null
+          node --input-type=module -e 'const m = await import("axm-ignition-fabric/reference-state-closure-evidence"); if (typeof m.runReferenceStateClosureEvidence !== "function") process.exit(1)'
+
+  real-portable-provider:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact consumer head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout pinned State Research provider
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/axm-state-research
+          ref: ec159470bef52974dad25292ea7a6b34be54ccd4
+          path: provider
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Run provider-owned experiment and portability regressions
+        run: python -m unittest discover -s provider/experiments/reference-state-closure-v1 -p 'test_*.py' -v
+      - name: Build and provider-verify exact portable artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python provider/experiments/reference-state-closure-v1/portable.py build --output "$RUNNER_TEMP/reference-state-closure.pyz" > "$RUNNER_TEMP/provider-build.json"
+          python provider/experiments/reference-state-closure-v1/portable.py verify "$RUNNER_TEMP/reference-state-closure.pyz" > "$RUNNER_TEMP/provider-source-verify.json"
+          python "$RUNNER_TEMP/reference-state-closure.pyz" verify > "$RUNNER_TEMP/portable-self-verify.json"
+      - name: Pack Ignition and install only local tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="$(npm pack --ignore-scripts --silent)"
+          mkdir -p "$RUNNER_TEMP/clean-consumer"
+          cp tests/reference-state-closure-clean-consumer.mjs "$RUNNER_TEMP/clean-consumer/smoke.mjs"
+          cd "$RUNNER_TEMP/clean-consumer"
+          npm init -y >/dev/null
+          npm install --offline --ignore-scripts "$GITHUB_WORKSPACE/$tarball" >/dev/null
+      - name: Remove provider checkout and consume only the copied portable file
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf provider
+          cd "$RUNNER_TEMP/clean-consumer"
+          PYTHON="$(command -v python)" node smoke.mjs \
+            "$RUNNER_TEMP/reference-state-closure.pyz" \
+            ec159470bef52974dad25292ea7a6b34be54ccd4 \
+            "$RUNNER_TEMP/ignition-reference-state-closure-receipt.json"
+      - name: Upload bounded bridge evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-state-closure-consumer-evidence
+          path: |
+            ${{ runner.temp }}/provider-build.json
+            ${{ runner.temp }}/provider-source-verify.json
+            ${{ runner.temp }}/portable-self-verify.json
+            ${{ runner.temp }}/ignition-reference-state-closure-receipt.json

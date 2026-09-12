@@ -1,0 +1,224 @@
+{
+  "schema": "axm.ignition-evidence/v0.23",
+  "version": "0.0.23",
+  "title": "Retained checkpoint migration under a hard residency ceiling",
+  "status": "sealed-on-open-pr",
+  "source": {
+    "repository": "mike-axiom-mir/axm-ignition-fabric",
+    "pullRequest": 3,
+    "branch": "axm/ignition-v0.01-materialization-core",
+    "implementationHead": "744e9902af9619ae90684afa9c69a68192dacff8",
+    "testedMergeCommit": "a4153547d563447f98780e0c4c040988e022a801",
+    "workflowRunId": 33536639227,
+    "workflowRunNumber": 450,
+    "workflowJobId": 99952449680
+  },
+  "validation": {
+    "workflowConclusion": "success",
+    "tests": {
+      "passed": 127,
+      "failed": 0,
+      "total": 127
+    },
+    "ciEvidenceGates": {
+      "passed": 26,
+      "failed": 0,
+      "total": 26
+    },
+    "requiredTests": [
+      "selection migration reuses surviving checkpoint arrays and builds only admissions",
+      "phase-shift decisions stay fixed while cumulative construction falls to 30 KB"
+    ]
+  },
+  "boundedChange": {
+    "changed": [
+      "Selection migration reuses the exact checkpoint record and Uint32Array for every surviving domain.",
+      "Only newly admitted domains construct checkpoint arrays and incur build work.",
+      "Evicted domains are dropped; a pure eviction constructs zero bytes.",
+      "Migration accounting distinguishes bytes built, retained and evicted."
+    ],
+    "unchanged": [
+      "The v0.22 recent-value ranking and admission rule.",
+      "The four-mutation value window.",
+      "The adaptive selection decisions and step timeline.",
+      "Legacy-compatible state hash, canonical size and domain identity.",
+      "Exact replay work and the hard 20,000-byte persistent/current-set residency ceiling."
+    ]
+  },
+  "phaseShift": {
+    "selectionTimeline": [
+      {
+        "step": 2,
+        "domains": [
+          "content-hash",
+          "imports"
+        ]
+      },
+      {
+        "step": 6,
+        "domains": [
+          "imports",
+          "metadata"
+        ]
+      },
+      {
+        "step": 8,
+        "domains": [
+          "metadata"
+        ]
+      }
+    ],
+    "migrationConstruction": [
+      {
+        "transition": "initial admission",
+        "addedDomains": [
+          "content-hash",
+          "imports"
+        ],
+        "retainedDomains": [],
+        "evictedDomains": [],
+        "bytesBuilt": 20000,
+        "bytesRetainedFromPrior": 0,
+        "bytesEvicted": 0
+      },
+      {
+        "transition": "retain imports and admit metadata",
+        "addedDomains": [
+          "metadata"
+        ],
+        "retainedDomains": [
+          "imports"
+        ],
+        "evictedDomains": [
+          "content-hash"
+        ],
+        "bytesBuilt": 10000,
+        "bytesRetainedFromPrior": 10000,
+        "bytesEvicted": 10000
+      },
+      {
+        "transition": "retain metadata and evict imports",
+        "addedDomains": [],
+        "retainedDomains": [
+          "metadata"
+        ],
+        "evictedDomains": [
+          "imports"
+        ],
+        "bytesBuilt": 0,
+        "bytesRetainedFromPrior": 10000,
+        "bytesEvicted": 10000
+      }
+    ],
+    "checkpointBytesBuilt": 30000,
+    "checkpointBytesRetainedAcrossMigrations": 20000,
+    "checkpointBytesEvicted": 20000,
+    "maxPersistentCheckpointBytes": 20000,
+    "finalPersistentCheckpointBytes": 10000,
+    "domainReplayCanonicalCharacters": 496836,
+    "checkpointBuildCanonicalCharacters": 248158,
+    "stateFingerprintCanonicalCharacters": 5334,
+    "reconfigurationCount": 3,
+    "finalHash": "620413c8",
+    "finalCanonicalCharacters": 1284921,
+    "finalSelectedDomains": [
+      "metadata"
+    ],
+    "finalDomainIdentity": {
+      "content-hash": {
+        "hash": "53d854cc",
+        "revision": 5
+      },
+      "imports": {
+        "hash": "9bfc0d5e",
+        "revision": 5
+      },
+      "lint": {
+        "hash": "10803fea",
+        "revision": 1
+      },
+      "metadata": {
+        "hash": "ee2533ea",
+        "revision": 6
+      },
+      "risk": {
+        "hash": "fa614a9d",
+        "revision": 1
+      },
+      "symbols": {
+        "hash": "a40d212a",
+        "revision": 1
+      },
+      "tokens": {
+        "hash": "33f432b2",
+        "revision": 1
+      }
+    },
+    "exactReplayPreserved": true,
+    "selectionTimelinePreserved": true,
+    "hardResidencyCeilingPreserved": true
+  },
+  "deltaFromV022": {
+    "priorCheckpointBytesBuilt": 50000,
+    "currentCheckpointBytesBuilt": 30000,
+    "checkpointBytesBuiltSaved": 20000,
+    "checkpointBytesBuiltReductionPercent": 40,
+    "priorCheckpointBuildCanonicalCharacters": 446008,
+    "currentCheckpointBuildCanonicalCharacters": 248158,
+    "checkpointBuildCanonicalCharactersSaved": 197850,
+    "checkpointBuildCanonicalCharactersReductionPercent": 44.36,
+    "domainReplayCanonicalCharactersBefore": 496836,
+    "domainReplayCanonicalCharactersAfter": 496836,
+    "maxPersistentCheckpointBytesBefore": 20000,
+    "maxPersistentCheckpointBytesAfter": 20000
+  },
+  "frequencyVsPositionRegressionLock": {
+    "finalHash": "6ecb4baf",
+    "finalCanonicalCharacters": 1284934,
+    "finalSelectedDomains": [
+      "content-hash",
+      "imports"
+    ],
+    "selectionTimeline": [
+      {
+        "step": 8,
+        "domains": [
+          "content-hash",
+          "imports"
+        ]
+      }
+    ],
+    "domainReplayCanonicalCharacters": 1041037,
+    "checkpointBuildCanonicalCharacters": 112045,
+    "checkpointBytesBuilt": 20000,
+    "maxPersistentCheckpointBytes": 20000
+  },
+  "storageIdentityProof": {
+    "retainedCheckpointRecordReused": true,
+    "retainedUint32ArrayIdentityReused": true,
+    "newlyAdmittedDomainsOnlyAreBuilt": true,
+    "pureEvictionBuildsZeroBytes": true,
+    "retainedDomainsChargedAsRebuilt": false
+  },
+  "timingObservation": {
+    "samples": 5,
+    "phaseShiftAdaptiveMedianMs": 29.000647000000015,
+    "phaseShiftNoneMedianMs": 35.00305499999999,
+    "note": "Hosted timings are observations only, not a hard speed invariant or a controlled cross-run comparison with v0.22."
+  },
+  "truthBoundary": {
+    "strongestSafeClaim": "In the deterministic 2,500-file phase-shift harness, v0.23 preserved the sealed v0.22 decisions, exact replay and legacy-compatible truth while reusing surviving checkpoint arrays. Cumulative checkpoint construction fell from 50,000 to 30,000 bytes and construction work fell from 446,008 to 248,158 canonical characters. Persistent/current-set checkpoint residency never exceeded 20,000 bytes.",
+    "notClaimed": [
+      "The 20,000-byte invariant is not a measurement of transient allocator or whole-process physical peak memory.",
+      "No change was made to adaptive ranking, admission, value-window or selection policy.",
+      "No universal performance, hardware, chip, PIM, datacenter, fleet or energy claim is made.",
+      "No merge or CANON action was performed."
+    ]
+  },
+  "laneStatus": {
+    "pullRequestOpen": true,
+    "mergePerformed": false,
+    "canonPerformed": false,
+    "nextGateAuthorized": false
+  }
+}

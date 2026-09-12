@@ -1,0 +1,163 @@
+{
+  "schema": "axm.ignition-domain-checkpoint-evidence/v0.21",
+  "sourceHead": "f2d0da7bae8e68e5324df6e78f2b5b413afe7b3c",
+  "sourceRun": 33384107725,
+  "sourceJob": 99462729456,
+  "sourceConclusion": "success",
+  "tests": { "passed": 120, "failed": 0 },
+  "ciEvidenceGates": { "passed": 25, "failed": 0 },
+  "samplesPerMethodScenario": 5,
+  "fileCount": 2500,
+  "invariants": {
+    "stateFingerprintCheckpointBytes": 10000,
+    "stateFingerprintReplayHeldConstantAcrossDomainPolicies": true,
+    "legacyStateHashPreserved": true,
+    "canonicalSizePreserved": true,
+    "mutationChangedDomainsPreserved": true,
+    "domainHashesPreserved": true,
+    "domainRevisionsPreserved": true
+  },
+  "checkpointBodyBytes": {
+    "none": 0,
+    "oneDomain": 10000,
+    "twoDomains": 20000,
+    "allSevenDomains": 70000
+  },
+  "results": {
+    "pathFirst": {
+      "finalHash": "0695861e",
+      "changedDomains": ["metadata"],
+      "stateFingerprintCharactersRehashed": 1284833,
+      "none": {
+        "domainCheckpointBytes": 0,
+        "domainCanonicalCharactersRehashed": 136091,
+        "domainEntriesRehashed": 2500,
+        "domainEntriesSkipped": 0,
+        "wallMsMedian": 22.45048300000002
+      },
+      "selectiveMetadata": {
+        "domainCheckpointBytes": 10000,
+        "domainCanonicalCharactersRehashed": 136059,
+        "domainEntriesRehashed": 2500,
+        "domainEntriesSkipped": 0,
+        "wallMsMedian": 20.196091999999993,
+        "canonicalCharactersSaved": 32,
+        "canonicalFractionSaved": 0.00023513678347576253
+      },
+      "fullSeven": {
+        "domainCheckpointBytes": 70000,
+        "domainCanonicalCharactersRehashed": 136059,
+        "domainEntriesRehashed": 2500,
+        "domainEntriesSkipped": 0,
+        "wallMsMedian": 20.527833000000015
+      },
+      "counterexample": "A first-entry mutation has no unchanged domain-entry prefix to skip. Selective and full checkpoints save only 32 canonical characters despite their persistent checkpoint bodies."
+    },
+    "pathMiddle": {
+      "finalHash": "7f864712",
+      "changedDomains": ["metadata"],
+      "stateFingerprintCharactersRehashed": 650693,
+      "none": {
+        "domainCheckpointBytes": 0,
+        "domainCanonicalCharactersRehashed": 136091,
+        "domainEntriesRehashed": 2500,
+        "domainEntriesSkipped": 0,
+        "wallMsMedian": 15.31941900000001
+      },
+      "selectiveMetadata": {
+        "domainCheckpointBytes": 10000,
+        "domainCanonicalCharactersRehashed": 70261,
+        "domainEntriesRehashed": 1250,
+        "domainEntriesSkipped": 1250,
+        "wallMsMedian": 13.232769999999988,
+        "canonicalCharactersSaved": 65830,
+        "canonicalFractionSaved": 0.48372045175654527
+      },
+      "fullSeven": {
+        "domainCheckpointBytes": 70000,
+        "domainCanonicalCharactersRehashed": 70261,
+        "domainEntriesRehashed": 1250,
+        "domainEntriesSkipped": 1250,
+        "wallMsMedian": 12.465572999999978
+      }
+    },
+    "pathLast": {
+      "finalHash": "3ce62c72",
+      "changedDomains": ["metadata"],
+      "stateFingerprintCharactersRehashed": 575,
+      "none": {
+        "domainCheckpointBytes": 0,
+        "domainCanonicalCharactersRehashed": 136091,
+        "domainEntriesRehashed": 2500,
+        "domainEntriesSkipped": 0,
+        "wallMsMedian": 5.934923999999995
+      },
+      "selectiveMetadata": {
+        "domainCheckpointBytes": 10000,
+        "domainCanonicalCharactersRehashed": 79,
+        "domainEntriesRehashed": 1,
+        "domainEntriesSkipped": 2499,
+        "wallMsMedian": 3.0304350000000113,
+        "canonicalCharactersSaved": 136012,
+        "canonicalFractionSaved": 0.9994195060657942
+      },
+      "fullSeven": {
+        "domainCheckpointBytes": 70000,
+        "domainCanonicalCharactersRehashed": 79,
+        "domainEntriesRehashed": 1,
+        "domainEntriesSkipped": 2499,
+        "wallMsMedian": 3.2173950000000104
+      },
+      "selectiveEqualsFullReplayAtOneSeventhCheckpointBytes": true
+    },
+    "importLast": {
+      "finalHash": "690d24b5",
+      "canonicalCharacters": 1284856,
+      "changedDomains": ["content-hash", "imports"],
+      "stateFingerprintCharactersRehashed": 571,
+      "none": {
+        "domainCheckpointBytes": 0,
+        "domainCanonicalCharactersRehashed": 112045,
+        "domainEntriesRehashed": 5000,
+        "domainEntriesSkipped": 0,
+        "wallMsMedian": 5.753183000000007
+      },
+      "wrongMetadata": {
+        "domainCheckpointBytes": 10000,
+        "domainCanonicalCharactersRehashed": 112045,
+        "domainEntriesRehashed": 5000,
+        "domainEntriesSkipped": 0,
+        "wallMsMedian": 5.771016000000003,
+        "canonicalCharactersSaved": 0,
+        "wrongCheckpointProducesZeroReplayBenefit": true
+      },
+      "selectiveContentHashImports": {
+        "domainCheckpointBytes": 20000,
+        "domainCanonicalCharactersRehashed": 76,
+        "domainEntriesRehashed": 2,
+        "domainEntriesSkipped": 4998,
+        "wallMsMedian": 3.1830300000000022,
+        "canonicalCharactersSaved": 111969,
+        "canonicalFractionSaved": 0.9993217011022357
+      },
+      "fullSeven": {
+        "domainCheckpointBytes": 70000,
+        "domainCanonicalCharactersRehashed": 76,
+        "domainEntriesRehashed": 2,
+        "domainEntriesSkipped": 4998,
+        "wallMsMedian": 3.4019499999999994
+      },
+      "selectiveEqualsFullReplayAtLessThanOneThirdCheckpointBytes": true
+    }
+  },
+  "proofBoundary": {
+    "exactness": "Every domain-checkpoint policy preserves the same legacy-compatible state hash, exact canonical size, changed-domain receipt, domain hashes, and domain revisions as the no-domain-checkpoint path.",
+    "isolation": "All methods retain the same 10,000-byte v0.20 state-fingerprint checkpoint body and report identical state-fingerprint replay work. v0.21 varies only domain-hash checkpoints.",
+    "position": "Domain FNV hashes remain sequential. Checkpoints skip only the unchanged prefix before the changed entry; the changed entry and suffix remain replay work.",
+    "selection": "A checkpoint for a domain that did not change has no changed-domain replay value in the measured mutation.",
+    "timing": "Five fresh hosted Node processes per method/scenario. Bootstrap/checkpoint construction and independent full-reference verification are excluded. Timing is observational and is not a universal performance claim.",
+    "hardware": "This is deterministic Node software evidence. No chip, PIM, datacenter, energy, fleet-density, or hardware-speed claim is made."
+  },
+  "strongestSupportedClaim": "In this deterministic 2,500-file tracked-workspace harness, exact file-boundary FNV checkpoints can be maintained selectively for canonical domain-entry hashes without changing the legacy state hash, canonical size, mutation receipt, domain hashes, or revisions. A last-file metadata mutation reduced metadata-domain replay from 136,091 to 79 canonical characters using a 10,000-byte metadata checkpoint body, exactly matching the replay work of a 70,000-byte seven-domain checkpoint body. A near-end two-domain import mutation reduced domain replay from 112,045 to 76 characters using 20,000 bytes, again exactly matching 70,000-byte full checkpoints. A wrong 10,000-byte metadata checkpoint during that import mutation saved zero domain characters. Checkpoint value is therefore domain- and position-specific; storing all possible checkpoint truth is not automatically optimal.",
+  "nextGate": "v0.22 adaptive truth-checkpoint retention under a hard byte budget"
+}
