@@ -1,0 +1,162 @@
+{
+  "schema": "axm.ignition-whole-process-residual-evidence/v0.15",
+  "measuredHead": "e9e73fbdc1b01758bf1d600d116ba91021cc20c5",
+  "workflowRun": 33371638473,
+  "jobId": 99423872434,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "freshProcessesPerBenchmark": 5,
+    "forcedGc": true
+  },
+  "verification": {
+    "testsPassed": 80,
+    "testsFailed": 0,
+    "allHistoricalBenchmarkGatesPassed": true,
+    "residualAttributionGatePassed": true
+  },
+  "fixture": {
+    "fileCount": 2500,
+    "packageCount": 25,
+    "sourceCharacters": 1014151,
+    "sourceUtf8Bytes": 1014151
+  },
+  "logicalRun": {
+    "resultHash": "daa06e7e",
+    "totalMaterializedBytes": 147572,
+    "declaredPeakLiveBodyBytes": 39820,
+    "cacheBytesAfter": 0,
+    "resourceSnapshotsStoredInReceipt": 0
+  },
+  "absoluteStageMediansBytes": {
+    "bootModulesLoaded": {
+      "rss": 54222848,
+      "heapTotal": 6922240,
+      "heapUsed": 4183448,
+      "external": 1652118,
+      "arrayBuffers": 18843
+    },
+    "registryCreated": {
+      "rss": 57630720,
+      "heapTotal": 7184384,
+      "heapUsed": 4212896,
+      "external": 1605633,
+      "arrayBuffers": 18843
+    },
+    "sessionCreated": {
+      "rss": 57761792,
+      "heapTotal": 7184384,
+      "heapUsed": 4217008,
+      "external": 1605633,
+      "arrayBuffers": 18843
+    },
+    "canonicalStateCreated": {
+      "rss": 61562880,
+      "heapTotal": 10854400,
+      "heapUsed": 5852768,
+      "external": 1605633,
+      "arrayBuffers": 18843
+    },
+    "stateFingerprintRetained": {
+      "rss": 67403776,
+      "heapTotal": 15572992,
+      "heapUsed": 5680968,
+      "external": 1605633,
+      "arrayBuffers": 18843
+    },
+    "runResultRetained": {
+      "rss": 69898240,
+      "heapTotal": 15572992,
+      "heapUsed": 5917680,
+      "external": 1665906,
+      "arrayBuffers": 18843
+    },
+    "frameworkObjectsDropped": {
+      "rss": 69898240,
+      "heapTotal": 14000128,
+      "heapUsed": 4457704,
+      "external": 1665906,
+      "arrayBuffers": 18843
+    }
+  },
+  "lifetimeAttributionMedianBytes": {
+    "registryCreated": {
+      "rssDelta": 3407872,
+      "heapTotalDelta": 262144,
+      "heapUsedDelta": 29448
+    },
+    "sessionCreated": {
+      "rssDelta": 131072,
+      "heapTotalDelta": 0,
+      "heapUsedDelta": 4112
+    },
+    "canonicalStateCreated": {
+      "rssDelta": 3801088,
+      "heapTotalDelta": 3670016,
+      "heapUsedDelta": 1635760
+    },
+    "fingerprintStage": {
+      "rssDelta": 5812224,
+      "heapTotalDelta": 4718592,
+      "heapUsedDelta": -171800
+    },
+    "executionPeakAbovePreRun": {
+      "rssDelta": 2695168,
+      "heapTotalDelta": 0,
+      "heapUsedDelta": 250880,
+      "externalDelta": 100093,
+      "arrayBufferDelta": 39820
+    },
+    "resultDropRecovered": {
+      "rss": 0,
+      "heapTotal": 0,
+      "heapUsed": 12008
+    },
+    "canonicalStateDropRecovered": {
+      "rss": 0,
+      "heapTotal": 524288,
+      "heapUsed": 1441192
+    },
+    "frameworkDropRecovered": {
+      "rss": 0,
+      "heapTotal": 1310720,
+      "heapUsed": 9856
+    },
+    "finalResidualVsBoot": {
+      "rssDelta": 15638528,
+      "heapTotalDelta": 7077888,
+      "heapUsedDelta": 274256,
+      "externalDelta": 13788,
+      "arrayBufferDelta": 0
+    }
+  },
+  "peakSites": {
+    "arrayBuffers": "after-materialize:workspace-symbol-index:live39820 in 5/5 samples",
+    "heapUsed": "after-lifetime-decision:workspace-report-projection:live0 in 5/5 samples",
+    "external": "workspace-symbol-index phase in 5/5 samples"
+  },
+  "derivedObservations": {
+    "bootRssMiB": 51.7109375,
+    "preRunRssMiB": 64.28125,
+    "executionArrayBufferPeakKiB": 38.88671875,
+    "executionArrayBufferAsPercentOfPreRunRss": 0.059076808990641716,
+    "canonicalStateHeapUsedDeltaMiB": 1.5599822998046875,
+    "finalRssHighWaterResidualMiB": 14.9140625
+  },
+  "interpretation": {
+    "execution": "The v0.14 physical typed-array invariant survives: incremental ArrayBuffer peak above the already-loaded pre-run system is exactly 39,820 B in all five samples.",
+    "state": "The persistent 2,500-file JavaScript truth fixture adds about 1.64 MB heapUsed at creation in this process shape; dropping the canonical state later recovers about 1.44 MB heapUsed median.",
+    "fingerprint": "The state-fingerprint stage expands RSS and heapTotal while post-GC heapUsed falls. This is an observed high-water/capacity effect, not evidence that the retained fingerprint string itself costs 5.8 MB. The exact temporary allocation/heap-growth cause is not yet isolated.",
+    "rss": "After result, state, session, and registry references are dropped, RSS remains about 15.64 MB above the original module-loaded boot snapshot while ArrayBuffer returns fully to baseline. This is a process/runtime high-water observation, not live capability-body memory and not proof those pages are irreclaimable by the OS.",
+    "fleet": "The active capability body is no longer the dominant memory envelope in this Node fixture. Any datacenter-scale savings claim would require amortizing or otherwise reducing runtime/process/state overhead and testing real concurrent services; v0.15 does not establish fleet savings."
+  },
+  "truthBoundary": [
+    "RSS, heapTotal, heapUsed, external, ArrayBuffer, and V8 malloced memory overlap and are not additive buckets.",
+    "Forced GC checkpoints do not guarantee immediate RSS return to the operating system.",
+    "The Node/module boot baseline is not attributed to individual capabilities.",
+    "The 2,500-file JavaScript fixture is not a universal canonical-state representation.",
+    "The fingerprint-stage RSS/heapTotal expansion has not yet been isolated to a specific line-level allocation mechanism.",
+    "No datacenter, container-density, energy, CPU, cloud-cost, or fleet-level savings claim is established."
+  ],
+  "nextGate": "Isolate v0.15's fingerprint-stage high-water. Compare current stableStringify(value) -> fnv1a32(text), which materializes a complete canonical serialization string, against a deterministic streaming/incremental FNV path that emits the exact same hash without retaining the whole serialization at once. Measure heapUsed, heapTotal, RSS high-water, timing, exact hash equivalence, and counterexamples."
+}

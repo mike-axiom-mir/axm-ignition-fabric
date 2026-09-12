@@ -1,0 +1,102 @@
+{
+  "schema": "axm.ignition-v0.13-segmented-search-evidence/v0.13",
+  "measurementRunId": 33348126397,
+  "measurementHead": "a68b37a80f568adf631c4215b7806a7b9049d48f",
+  "fileCount": 2500,
+  "samplesPerMode": 5,
+  "resultHash": "daa06e7e",
+  "segmentSweep": [
+    {
+      "segmentBits": 0,
+      "segmentCount": 1,
+      "totalMaterializedBytesMedian": 962268,
+      "searchMaterializedBytesMedian": 837720,
+      "declaredPeakLiveBodyBytesMedian": 837720,
+      "measuredPeakArrayBufferDeltaBytesMedian": 837720,
+      "measuredPeakExternalDeltaBytesMedian": 1041655,
+      "measuredPeakRssDeltaBytesMedian": 19501056,
+      "wallMsMedian": 130.090563,
+      "arrayBufferPeakSite": {
+        "phase": "after-materialize",
+        "capabilityId": "workspace-search-index",
+        "samples": 5
+      }
+    },
+    {
+      "segmentBits": 2,
+      "segmentCount": 4,
+      "totalMaterializedBytesMedian": 390108,
+      "searchMaterializedBytesMedian": 265560,
+      "declaredPeakLiveBodyBytesMedian": 265560,
+      "measuredPeakArrayBufferDeltaBytesMedian": 797982,
+      "measuredPeakExternalDeltaBytesMedian": 1041655,
+      "measuredPeakRssDeltaBytesMedian": 10268672,
+      "wallMsMedian": 90.334681,
+      "arrayBufferPeakSite": {
+        "phase": "after-materialize",
+        "capabilityId": "workspace-metadata-index",
+        "samples": 5
+      }
+    },
+    {
+      "segmentBits": 4,
+      "segmentCount": 16,
+      "totalMaterializedBytesMedian": 214532,
+      "searchMaterializedBytesMedian": 89984,
+      "declaredPeakLiveBodyBytesMedian": 89984,
+      "measuredPeakArrayBufferDeltaBytesMedian": 815632,
+      "measuredPeakExternalDeltaBytesMedian": 1041655,
+      "measuredPeakRssDeltaBytesMedian": 4706304,
+      "wallMsMedian": 79.653588,
+      "arrayBufferPeakSite": {
+        "phase": "after-materialize",
+        "capabilityId": "workspace-metadata-index",
+        "samples": 5
+      }
+    },
+    {
+      "segmentBits": 6,
+      "segmentCount": 64,
+      "totalMaterializedBytesMedian": 147572,
+      "searchMaterializedBytesMedian": 23024,
+      "declaredPeakLiveBodyBytesMedian": 39820,
+      "measuredPeakArrayBufferDeltaBytesMedian": 782322,
+      "measuredPeakExternalDeltaBytesMedian": 1041655,
+      "measuredPeakRssDeltaBytesMedian": 4038656,
+      "wallMsMedian": 75.483397,
+      "arrayBufferPeakSite": {
+        "phase": "after-materialize",
+        "capabilityId": "workspace-metadata-index",
+        "samples": 5
+      }
+    }
+  ],
+  "observedDeltaBits6Vs0": {
+    "searchBodySavedBytes": 814696,
+    "totalMaterializedSavedBytes": 814696,
+    "declaredPeakSavedBytes": 797900,
+    "measuredArrayBufferPeakSavedBytes": 55398,
+    "declaredVsMeasuredPeakGapAtBits6Bytes": 742502,
+    "wallMsObservedLower": 54.607166
+  },
+  "counterexamples": {
+    "zeroSegmentation": "segmentBits=0 reproduces the atomic search-body baseline and gives no segmentation benefit.",
+    "concentratedPartition": "A deterministic concentrated-token fixture places all relevant tokens into one partition; segmentBits=6 then materializes the same search bytes as the monolithic search capability."
+  },
+  "correctness": {
+    "queriesChecked": ["ignite", "deterministic", "workspace", "module", "truth", "does_not_exist"],
+    "segmentedRuntimeRejectsDifferentRequestSegment": true,
+    "sourceDomainBinding": ["tokens"],
+    "reportHashStableAcrossSweep": true
+  },
+  "truthBoundary": [
+    "v0.13 uses zero retention for segmented search because request-bound segment cache identity is not yet implemented.",
+    "The large reduction in declared runtime-body bytes does not equal the measured whole-process physical peak reduction.",
+    "At segmentBits=6 the measured ArrayBuffer peak is dominated by workspace-metadata-index after-materialize in all five memory samples.",
+    "The exact internal operation responsible for the metadata materialization peak has not yet been isolated, so no specific line-level cause is claimed.",
+    "Node external, heap and RSS are secondary process metrics and are not treated as direct equivalents of declared runtime-body bytes.",
+    "Hosted timing medians are observations for this fixture, not a universal speedup claim.",
+    "Segmentation provides no body reduction when relevant data is concentrated in a single partition."
+  ],
+  "strongestSupportedClaim": "In this deterministic workspace harness, request-specific hash-prefix segmentation reduced the search runtime body from 837,720 B to 23,024 B at 64 partitions while preserving the exact seven-body report hash. The declared live runtime-body peak fell to 39,820 B, but measured ArrayBuffer peak fell only to 782,322 B because a different materialization phase, workspace-metadata-index, became the dominant measured peak."
+}

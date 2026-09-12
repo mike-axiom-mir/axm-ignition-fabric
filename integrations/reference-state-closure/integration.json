@@ -1,0 +1,47 @@
+{
+  "schema": "axm.integration/v1",
+  "id": "axm.ignition.reference-state-closure-evidence/v0.1",
+  "consumer": {
+    "repository": "mike-axiom-mir/axm-ignition-fabric",
+    "base_pr": 7,
+    "base_head": "6defd4182a41fa226b4d8352d9186d5431634573",
+    "package": "axm-ignition-fabric",
+    "package_version": "0.0.24",
+    "entrypoint": "./reference-state-closure-evidence"
+  },
+  "provider": {
+    "repository": "mike-axiom-mir/axm-state-research",
+    "pull_request": 22,
+    "head": "ec159470bef52974dad25292ea7a6b34be54ccd4",
+    "capability_id": "axm.state-research.reference-state-closure.experiment/v1",
+    "artifact": "reference-state-closure.pyz",
+    "portable_schema": "axm.reference-state-closure.portable.v1",
+    "verification_schema": "axm.reference-state-closure.portable-verification.v1",
+    "report_schema": "axm.reference-state-closure.report.v1",
+    "license": "Apache-2.0"
+  },
+  "bridge": {
+    "mode": "explicit-local-provider",
+    "network_required": false,
+    "account_required": false,
+    "ai_model_required": false,
+    "provider_auto_discovery": false,
+    "provider_auto_install": false,
+    "default_fixture_sha256": "7f65abe33661b1deef2bac40052efff68088cb2d461e14d6a738f1556fb5d6a5",
+    "consumer_evidence_schema": "axm.ignition.reference-state-closure-evidence/v0.1"
+  },
+  "authority": {
+    "scope": "RESEARCH_EVIDENCE_ONLY",
+    "automatic_selection": false,
+    "automatic_execution": false,
+    "canonical_state_mutation": false,
+    "merge": false,
+    "canon": false
+  },
+  "truth_boundary": [
+    "provider portable integrity is checked independently by the consumer but is not authenticated authorship",
+    "the provider experiment is a deterministic software workload, not neural or hardware performance evidence",
+    "the bridge records external research evidence and does not establish Ignition performance or runtime superiority",
+    "AXM internal merge and CANON decisions are governed by the roots: Truth, Agency/non-domination, Continuity, and Wisdom before speed"
+  ]
+}

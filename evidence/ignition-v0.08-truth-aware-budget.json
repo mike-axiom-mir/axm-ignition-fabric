@@ -1,0 +1,67 @@
+{
+  "schema": "axm.ignition-truth-aware-budget-evidence/v0.08",
+  "status": "MEASURED_IN_HARNESS",
+  "testedHead": "706ec3ba940b8cc0afb6f71677063e1ee387b2a7",
+  "githubActionsRunId": 33334050971,
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "node": "v22.23.2",
+    "workspaceFiles": 2500,
+    "cacheBudgetBytes": 900000,
+    "canonicalTransitions": 4
+  },
+  "verification": {
+    "testsPassed": 41,
+    "testsFailed": 0,
+    "allPreviousEvidenceSteps": "PASS",
+    "truthAwareHardBudgetBenchmark": "PASS",
+    "allComparedOutputsEquivalentToDirectBaseline": true,
+    "hardCacheCeilingPreserved": true
+  },
+  "comparison": {
+    "fullInvalidation": {
+      "totalWallMs": 255.77586899999994,
+      "totalStaleReleasedBytes": 3560068,
+      "totalBudgetEvictedBytes": 268912,
+      "totalMaterializedBytes": 3829072,
+      "totalHits": 0,
+      "totalMisses": 24,
+      "finalCacheBytes": 890040
+    },
+    "scopedInvalidation": {
+      "totalWallMs": 44.38882400000011,
+      "totalStaleReleasedBytes": 49728,
+      "totalBudgetEvictedBytes": 450692,
+      "totalMaterializedBytes": 478192,
+      "totalHits": 4,
+      "totalMisses": 20,
+      "finalCacheBytes": 867720
+    },
+    "avoidedByScopedTruth": {
+      "staleReleasedBytes": 3510340,
+      "materializedBytes": 3350880,
+      "wallMsObserved": 211.38704499999983,
+      "extraCacheHits": 4
+    }
+  },
+  "observations": [
+    "The trusted transition receipt marks imports + content-hash as changed, so only dependency and duplicate-content bodies are stale by truth.",
+    "Scoped truth retains the still-valid expensive search body across canonical transitions, producing four additional cache hits.",
+    "Scoped truth produces more budget-eviction bytes than full invalidation in this trace because valid expensive state survives long enough to compete for scarce cache space; this is expected and is kept as evidence, not treated as a failure.",
+    "After stale bodies are removed, the value-aware budget policy may evict still-valid lower-value bodies to enforce the hard 900 KB ceiling.",
+    "Unreceipted canonical state changes still fall back to complete budget-cache invalidation.",
+    "A transition receipt bound to the wrong canonical base is rejected before cache mutation."
+  ],
+  "timingBoundary": "Upstream transition-receipt generation and direct-baseline verification are excluded. Measured time includes stale invalidation/fallback, hard-budget eviction, materialization, and post-transition execution.",
+  "strongestSupportedClaim": "In this deterministic workspace harness, truth-scoped invalidation and hard-budget retention can operate in one lifecycle: stale derived bodies are removed from trusted hash-bound transition evidence first, still-valid bodies remain eligible for retention, and only then does deterministic budget eviction choose among valid bodies. This preserved exact direct-baseline outputs while substantially reducing rematerialization in the measured transition trace.",
+  "boundaries": [
+    "Does not prove universal speedup or production-scale superiority.",
+    "Does not prove globally optimal retention or eviction.",
+    "Does not prove automatic arbitrary dependency inference.",
+    "Scoped correctness depends on complete and truthful upstream changed-domain evidence.",
+    "Transition-receipt generation is not free and is outside this benchmark timing.",
+    "Single hosted timing samples are observational, not a statistical performance distribution.",
+    "Does not create RAM, compute cycles, energy, or free resources."
+  ],
+  "nextGate": "Move from full-state body identity toward versioned domain/body identities so trusted unchanged domains can survive more granular canonical updates without hashing or treating the whole state as one monolith; then test repeated samples and multi-capability/dependency-aware budget execution."
+}
