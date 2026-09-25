@@ -42,7 +42,7 @@ function packageDocument(overrides = {}) {
     private: true,
     type: "module",
     description: "Deterministic bounded capability materialization and state-bound session runtime.",
-    license: "Apache-2.0",
+    license: "MPL-2.0",
     axmCapability: capability,
     ...Object.fromEntries(Object.entries(overrides).filter(([key]) => key !== "axmCapability")),
   };
@@ -53,7 +53,7 @@ function fixture(overrides = {}) {
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), `${JSON.stringify(packageDocument(overrides), null, 2)}\n`);
   fs.writeFileSync(path.join(root, "src", "capability.js"), descriptorSource);
-  fs.writeFileSync(path.join(root, "LICENSE"), "Apache License 2.0 fixture\n");
+  fs.writeFileSync(path.join(root, "LICENSE"), "Mozilla Public License Version 2.0 fixture\n");
   return root;
 }
 
