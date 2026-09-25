@@ -60,7 +60,7 @@ function requireString(value, label) {
 function assertCapabilityBoundary(packageDocument) {
   if (packageDocument.name !== "axm-ignition-fabric") throw new Error("unexpected package name");
   if (packageDocument.private !== true) throw new Error("package must remain private to prevent accidental registry publication");
-  if (packageDocument.license !== "Apache-2.0") throw new Error("unexpected package license declaration");
+  if (packageDocument.license !== "MPL-2.0") throw new Error("unexpected package license declaration");
   const capability = packageDocument.axmCapability;
   if (!capability || capability.schema !== "axm.capability/v1") throw new Error("axmCapability schema is missing or incompatible");
   if (capability.id !== "axm.ignition.materialization-core") throw new Error("unexpected capability id");
@@ -88,6 +88,8 @@ async function loadExecutableDescriptor(root, sourceIdentity) {
 }
 
 export async function buildArtifacts(root = process.cwd()) {
+  const licenseText = fs.readFileSync(resolveRegularFile(root, "LICENSE").path, "utf8");
+  if (!licenseText.startsWith("Mozilla Public License Version 2.0")) throw new Error("current license evidence drift");
   const packageFile = resolveRegularFile(root, "package.json").path;
   const packageDocument = JSON.parse(fs.readFileSync(packageFile, "utf8"));
   const capability = assertCapabilityBoundary(packageDocument);

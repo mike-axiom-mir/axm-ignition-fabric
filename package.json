@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Deterministic bounded capability materialization and state-bound session runtime.",
-  "license": "Apache-2.0",
+  "license": "MPL-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mike-axiom-mir/axm-ignition-fabric.git"
